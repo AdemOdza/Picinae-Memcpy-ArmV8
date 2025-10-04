@@ -7635,6 +7635,49 @@ Proof.
       eapply NodeInTail; easy.
 Qed.
 
+Theorem wf_iff_nul:
+  forall mem head,
+  well_formed_list mem head <-> node_in_linked_list mem head NULL.
+Proof.
+  split.
+    apply wf_has_null.
+    apply has_null_wf.
+Qed.
+
+Theorem nwf_nnul:
+  forall mem head,
+    (~ well_formed_list mem head) -> ~ node_in_linked_list mem head NULL.
+Proof.
+  intros. now rewrite <-wf_iff_nul.
+Qed.
+
+Theorem node_not_in_list_forall_diff:
+  forall mem head n, ~ node_in_linked_list mem head n -> LLForall (fun _ a => a <> n) mem head.
+Proof.
+  cofix IH.
+  intros. destruct (N.eq_dec head NULL);[subst head; constructor|].
+  destruct (list_node_next mem head)  as [next|] eqn:EQ.
+    econstructor; try eassumption. intro; subst head; apply H; constructor.
+    apply IH. intro. apply H. econstructor; try eassumption. intro; subst head; apply H; constructor.
+    destruct head; discriminate || contradiction.
+Qed.
+
+Theorem dist_next_all_nnul:
+  forall mem a z len
+    (LEN:node_distance mem a z len)
+    (NX: list_node_next mem z = Some a),
+  LLForall (fun m' a' => a' <> NULL) mem a.
+Proof.
+  intros.
+  apply node_not_in_list_forall_diff.
+  apply nwf_nnul.
+  destruct (N.eq_dec a z).
+    subst z; now apply one_cycle_imp_not_wf.
+    eapply cycle_imp_not_wf; try eassumption.
+    eapply node_dist_imp_node_in; eassumption.
+    econstructor; try easy; try eassumption; constructor.
+Qed.
+
 End ll_section.
 (* Override psimpl_hook using `Ltac psimpl_hook ::= psimpl.` To enable
    the psimplifier.  This is a workaround to keep the theory library independent

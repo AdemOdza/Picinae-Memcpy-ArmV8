@@ -1,0 +1,16 @@
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x00101140	=>mov_r32_r32
+		| 0x00101142	=>lea_r32_addr
+		| 0x00101145	=>mov_r32_r32
+		| 0x00101147	=>imul_r32_r32
+		| 0x0010114a	=>cmp_r32_r32
+		| 0x0010114c	=>jge_addr
+		|    1053006	=>nop
+		| 0x00101150	=>sub_r32_i
+		| 0x00101153	=>mov_r32_r32
+		| 0x00101155	=>lea_r32_addr
+		| 0x00101158	=>imul_r32_r32
+		| 0x0010115b	=>cmp_r32_r32
+		| 0x0010115d	=>jg_addr
+		| 0x0010115f	=>ret

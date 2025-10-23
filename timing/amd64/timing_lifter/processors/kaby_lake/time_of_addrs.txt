@@ -1,0 +1,103 @@
+File : arraysearch_find_amd64.v
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x00101140	=>movzx_r32_r16
+		| 0x00101143	=>test_r16_r16
+		| 0x00101146	=>jz_addr
+		| 0x00101148	=>xor_r32_r32
+		| 0x0010114a	=>jmp_addr
+		| 0x00101150	=>add_r64_i
+		| 0x00101154	=>cmp_r32_r32
+		| 0x00101156	=>jle_addr
+		| 0x00101158	=>cmp_wc
+		| 0x0010115b	=>jnz_addr
+		| 0x0010115d	=>ret
+		| 0x00101160	=>mov_wc
+		| 0x00101165	=>ret
+File : collatz_collatz_amd64.v
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x00101160	=>xor_r32_r32
+		| 0x00101162	=>jmp_addr
+		| 0x00101168	=>add_r32_i
+		| 0x0010116b	=>cmp_r32_i
+		| 0x00101170	=>jz_addr
+		| 0x00101172	=>test_r8_i
+		| 0x00101176	=>jz_addr
+		| 0x00101178	=>add_r32_i
+		| 0x0010117b	=>lea_wc
+		| 0x0010117f	=>cmp_r32_i
+		| 0x00101184	=>jz_addr
+		| 0x00101186	=>shr_wc
+		| 0x00101189	=>cmp_r16_i
+		| 0x0010118d	=>jnz_addr
+		| 0x0010118f	=>ret
+		| 0x00101190	=>ret
+		| 0x00101191	=>ret
+File : linked_list_find_in_list_amd64.v
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x00101310	=>jmp_addr
+		| 0x00101320	=>cmp_wc
+		| 0x00101322	=>jz_addr
+		| 0x00101324	=>mov_wc
+File : linked_list_insert_after_pos_in_list_amd64.v
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x001012c0	=>test_r64_r64
+		| 0x001012c3	=>jz_addr
+		| 0x001012c5	=>test_r64_r64
+		| 0x001012c8	=>jz_addr
+		| 0x001012ca	=>xor_r32_r32
+		| 0x001012cc	=>test_r32_r32
+		| 0x001012d0	=>jmp_addr
+		|    1053408	=>add_r32_i
+		|    1053411	=>cmp_r32_r32
+		|    1053413	=>jz_addr
+		|    1053415	=>mov_r64_r64
+		|    1053418	=>mov_wc
+		|    1053422	=>test_r64_r64
+		| 0x001012f3	=>mov_wc
+		| 0x001012f7	=>mov_wc
+		| 0x001012fb	=>ret
+		| 0x00101300	=>mov_r64_r64
+		| 0x00101303	=>mov_wc
+		| 0x00101307	=>mov_wc
+		| 0x0010130b	=>mov_wc
+		| 0x0010130f	=>ret
+File : linked_list_insert_in_sorted_list_amd64.v
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x00101340	=>mov_wc
+		| 0x00101342	=>cmp_r32_i
+		| 0x00101347	=>jz_addr
+		| 0x00101349	=>nop_[m32]
+		| 0x00101350	=>mov_r64_r64
+		| 0x00101353	=>mov_wc
+		| 0x00101357	=>cmp_wc
+		| 0x00101359	=>jnc_addr
+		| 0x0010135b	=>mov_wc
+		| 0x0010135f	=>mov_wc
+		| 0x00101363	=>ret
+		| 0x00101368	=>mov_r64_r64
+		| 0x0010136b	=>mov_wc
+		| 0x0010136f	=>mov_wc
+		| 0x00101373	=>mov_wc
+		| 0x00101377	=>ret
+File : while_true_break_while_true_break_amd64.v
+Definition time_of_addr (s : store) (a : addr) : N :=
+	match a with
+		| 0x00101140	=>mov_r32_r32
+		| 0x00101142	=>lea_wc
+		| 0x00101145	=>mov_r32_r32
+		| 0x00101147	=>imul_r32_r32
+		| 0x0010114a	=>cmp_r32_r32
+		| 0x0010114c	=>jge_addr
+		|    1053006	=>nop
+		| 0x00101150	=>sub_r32_i
+		| 0x00101153	=>mov_r32_r32
+		| 0x00101155	=>lea_wc
+		| 0x00101158	=>imul_r32_r32
+		| 0x0010115b	=>cmp_r32_r32
+		| 0x0010115d	=>jg_addr
+		| 0x0010115f	=>ret

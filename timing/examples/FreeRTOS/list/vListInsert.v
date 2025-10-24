@@ -51,6 +51,7 @@ Definition time_of_vListInsert (mem : memory)
       tlw + 4 * tsw + tlw + tsw + taddi + tsw + tjalr
     ).
 
+(* Try the proof again with these changes. *)
 Definition insertion_index mem l le_node le_dist le_val new_val len :=
     exists gt_node gt_val,
     node_distance mem l le_node le_dist /\
@@ -58,43 +59,56 @@ Definition insertion_index mem l le_node le_dist le_val new_val len :=
     list_node_next mem le_node = Some gt_node /\
     list_node_value mem gt_node = Some gt_val /\
     gt_node <> NULL /\
-    le_val <= new_val < gt_val /\
+    new_val < gt_val /\
     gt_val <= portMAX_DELAY /\
-    (le_dist < len)%nat /\
+    (le_dist <= len)%nat /\
     (* all nodes below le_dist satisfy n.val <= new_val *)
-    forall n d v,
-        node_distance mem l n d ->
-        list_node_value mem n = Some v ->
-        ((d <= le_dist)%nat <-> v <= new_val).
+    match len with
+    | S _ =>
+        match le_dist with
+        | O => True
+        | S _ =>
+        le_val <= new_val /\
+        forall n d v h,
+            list_node_next mem l = Some h ->
+            node_distance mem h n d ->
+            list_node_value mem n = Some v ->
+            ((d < le_dist)%nat <-> v <= new_val)
+        end
+    | _ => True
+    end.
 
 Definition vListInsert_timing_invs (base_mem : memory)
-    (pxList pxListHead pxNewListItem le_node sentry : addr) 
+    (pxList pxListHead pxNewListItem le_node sentry : addr)
     (new_val le_val : N)
     (le_dist len : nat) (t:trace) : option Prop :=
 match t with (Addr a, s) :: t' => match a with
 | 0x800023f0 => Some (
-    insertion_index base_mem pxListHead le_node le_dist le_val new_val len /\
-    node_distance (s V_MEM32) pxListHead sentry (len - 1) /\
-    list_node_value (s V_MEM32) sentry = Some portMAX_DELAY /\
-    list_node_next (s V_MEM32) sentry = Some pxListHead /\
+    insertion_index base_mem sentry le_node le_dist le_val new_val len /\
+    node_distance base_mem pxListHead sentry (len) /\
+    list_node_value base_mem sentry = Some portMAX_DELAY /\
+    list_node_next base_mem sentry = Some pxListHead /\
     s R_A0 = pxList /\ s R_A1 = pxNewListItem /\ s V_MEM32 = base_mem /\
     s V_MEM32 Ⓓ[pxNewListItem] = new_val /\
     pxList ⊕ 8 = sentry /\
-    pxListHead <> NULL /\ len <> 0%nat /\
+    pxListHead <> NULL /\
     sentry <> NULL /\
     cycle_count_of_trace t' = 0
   )
-| 0x8000242c => Some (exists ctr nxt,
-    insertion_index base_mem pxListHead le_node le_dist le_val new_val len /\
-    node_distance (s V_MEM32) pxListHead sentry (len - 1) /\
-    list_node_value (s V_MEM32) sentry = Some portMAX_DELAY /\
+(* ctr is the number of nodes past the sentry we have seen are less than
+   new_val. At the end of the loop ctr is le_dist and register R_A4 holds
+   the first node with a value greater than new_val. *)
+| 0x8000242c => Some (exists ctr curr,
+    s R_A4 = curr /\
+    insertion_index base_mem sentry le_node le_dist le_val new_val len /\
+    node_distance base_mem pxListHead sentry (len) /\
+    list_node_next base_mem sentry = Some pxListHead /\
+    list_node_value base_mem sentry = Some portMAX_DELAY /\
     (base_mem Ⓓ[pxNewListItem] =? portMAX_DELAY) = false /\
     pxListHead <> NULL /\ s V_MEM32 = base_mem /\
     s R_A1 = pxNewListItem /\ s R_A3 = new_val /\
-    len <> 0%nat /\
     (ctr <= le_dist)%nat /\
-    list_node_next (s V_MEM32) (s R_A4) = Some nxt /\
-    node_distance base_mem pxListHead nxt ctr /\
+    node_distance base_mem sentry curr ctr /\
     sentry <> NULL /\
     cycle_count_of_trace t' =
       tlw + taddi + taddi +
@@ -117,7 +131,7 @@ Lemma not_at_end_next : forall mem head len a dist,
     exists val, list_node_next mem a = Some val.
 Proof.
     intros. unfold list_node_next. destruct a.
-    - pose proof (node_distance_uniq _ _ _ _ _ H H0).
+    - pose proof (node_distance_uniq H H0).
         subst. lia.
     - eexists. reflexivity.
 Qed.
@@ -130,7 +144,7 @@ Lemma not_at_end_next' : forall mem head len a1 dist1 a2 dist2,
     exists val2, list_node_next mem a2 = Some val2.
 Proof.
     intros. unfold list_node_next. destruct a2.
-    - pose proof (node_distance_uniq _ _ _ _ _ H H1).
+    - pose proof (node_distance_uniq H H1).
         subst. lia.
     - eexists. reflexivity.
 Qed.
@@ -161,7 +175,7 @@ Proof.
         pose proof distance_last_node.
         unfold LL.NULL in H4.
         specialize (H4 mem head (N.pos p) dst ltac:(lia) H1 H2).
-        pose proof (node_distance_uniq _ _ _ _ _ H0 H4).
+        pose proof (node_distance_uniq H0 H4).
         now symmetry.
 Qed.
 
@@ -169,68 +183,8 @@ Lemma Some_inv : forall (X : Type) (x y : X),
     Some x = Some y -> x = y.
 Proof. intros. now inversion H. Qed.
 
-Theorem node_dist_tri:
-  forall mem a m z lenam lenaz, 
-    (lenam <= lenaz)%nat ->
-    node_distance mem a m lenam ->
-    node_distance mem a z lenaz ->
-  node_distance mem m z (lenaz-lenam)%nat.
-Proof.
-  intros. gdep lenam; gdep m. induction H1; intros.
-    destruct lenam. inversion H0; simpl; now subst. lia.
-    rename next into b, src into a, dst into z, len into lenbz.
-    inversion H1; subst.
-      destruct lenam. inversion H0; subst. simpl. econstructor; try eassumption.
-        destruct lenam; try lia. inversion H0; subst. inversion LEN; subst. rewrite NEXT0 in NEXT; inversion NEXT; subst m. simpl; constructor.
-      rename next into c; move b before mem; move c before b; move len before z; move lenam before len.
-      move NEQ0 before NEQ; move m before z; move NEXT0 before NEXT.
-      rename IHnode_distance into IH.
-      inversion H0; subst.
-        simpl. econstructor; eassumption.
-        rewrite NEXT in NEXT1; inversion NEXT1; subst next; clear NEXT1; rename len0 into lenbm.
-        assert (Help: (lenbm <= S len)%nat) by lia.
-        specialize (IH _ _ Help LEN0).
-        simpl in *. assumption.
-Qed.
-
-Theorem exist_node_le_dist:
-  forall m src z len
-    (D: node_distance m src z (S len)),
-  forall l (H: (l <= S len)%nat), exists n, node_distance m src n l.
-Proof.
-  intros m src z len; gdep m; gdep src; gdep z; induction len; intros.
-    destruct l;[exists src; econstructor|inversion D; subst]. destruct l; try lia; inversion LEN; subst; exists z; assumption.
-    inversion D; subst. rename IHlen into IH; specialize (IH _ _ _ LEN).
-    set (Nat.pred l) as predl. assert (Help: (predl <= S len)%nat) by lia.
-    specialize (IH _ Help). destruct IH as [n D']. 
-    destruct l;[exists src; econstructor| exists n].
-    eapply DstSn; try eassumption. intro H0; subst n. simpl in predl; subst predl; move z before src; move l before len.
-    enough (Help2:node_distance m src z (S len - l)%nat).
-    pose proof (node_distance_uniq _ _ _ _ _ D Help2); lia.
-    rename src into a, next into b.
-    pose proof (node_dist_tri _ _ _ _ _ _ Help D' LEN).
-    pose proof (node_distance_uniq _ _ _ _ _ H0 D).
-    lia.
-Qed.
-
-Theorem node_dist_cycle_bound:
-  forall m src last len innode inlen,
-    node_distance m src last len ->
-    list_node_next m last = Some src ->
-    node_distance m src innode inlen ->
-    (inlen <= len)%nat.
-Proof.
-  intros. destruct (Nat.le_ge_cases inlen len) as [Le | Ge]; try assumption.
-  destruct (N.eq_dec last innode).
-    subst innode. rewrite (node_distance_uniq _ _ _ _ _ H H1) in *. lia.
-    pose proof (node_dist_tri _ _ _ _ _ _ Ge H H1).
-    assert (node_distance m last innode (S inlen)).
-      eapply DstSn; try eassumption.
-      pose proof (node_distance_uniq _ _ _ _ _ H2 H3); lia.
-Qed.
-
 Lemma no_dist_from_null:
-    forall mem node len, 
+    forall mem node len,
         node <> NULL ->
         ~ node_distance mem NULL node len.
 Proof.
@@ -239,34 +193,12 @@ Proof.
     inversion NEXT.
 Qed.
 
-Theorem next_node_inc_dist_or_same:
-  forall len mem src dst n
-    (D:node_distance mem src dst len)
-    (NEXT: list_node_next mem dst = Some n),
-  node_distance mem src n (S len) \/ src = n.
+Theorem list_node_next_eq {m a b c}:
+    list_node_next m a = Some b ->
+    list_node_next m a = Some c ->
+  c = b.
 Proof.
-    intros. induction D.
-    - destruct (N.eq_dec node n). now right.
-        left. econstructor. eassumption. assumption. constructor.
-    - destruct (N.eq_dec src n). now right.
-        left. econstructor; eauto. admit.
-Admitted.
-
-(* TODO: Charles, use this to prove the inductive loop invariant where the distance from head to the next node (a4?) 
-   is S ctr. *)
-Theorem node_dist_inc_nwf:
-  forall m src dst dst' sentry len slen
-    (LSD: node_distance m src dst len)
-    (DST': list_node_next m dst = Some dst')
-    (LSSen: node_distance m src sentry slen)
-    (LT: (len < slen)%nat),
-  node_distance m src dst' (S len).
-Proof.
-  intros. Check node_dist_tri.
-  destruct (next_node_inc_dist_or_same _ _ _ _ _ LSD DST'); try assumption.
-  subst dst'; exfalso.
-  pose proof (node_dist_cycle_bound _ _ _ _ _ _ LSD DST' LSSen).
-  lia.
+  intros B C; rewrite C in B; inversion B; easy.
 Qed.
 
 Theorem vListInsert_timing:
@@ -282,15 +214,14 @@ Theorem vListInsert_timing:
          (VAL: s V_MEM32 Ⓓ[pxNewListItem] = new_val)
          (* pxListHead is non-null *)
          (L_NN: pxListHead <> NULL)
-         (LEN: (0 < len)%nat)
          (* there is a sentry node *)
          (HD: 8 ⊕ pxList = sentry)
-         (SENTRY: node_distance (s V_MEM32) pxListHead sentry (len - 1))
-         (SENTRY_VAL: list_node_value (s V_MEM32) sentry = Some portMAX_DELAY)
-         (SENTRY_NEXT: list_node_next (s V_MEM32) sentry = Some pxListHead)
+         (SENTRY: node_distance base_mem pxListHead sentry (len))
+         (SENTRY_VAL: list_node_value base_mem sentry = Some portMAX_DELAY)
+         (SENTRY_NEXT: list_node_next base_mem sentry = Some pxListHead)
          (SENTRY_NN: sentry <> NULL)
          (* there is an index to insert at *)
-         (IDX: insertion_index base_mem pxListHead le_node le_dist le_val new_val len),
+         (IDX: insertion_index base_mem sentry le_node le_dist le_val new_val len),
   satisfies_all
     lifted_prog
     (vListInsert_timing_invs base_mem pxList pxListHead pxNewListItem le_node sentry new_val le_val le_dist len)
@@ -302,7 +233,7 @@ Proof using.
 
     Local Ltac step := tstep r5_step.
     simpl. rewrite ENTRY. unfold entry_addr. repeat step.
-    split. assumption. repeat split; auto. lia.
+    split. assumption. repeat split; auto.
 
     intros.
     eapply startof_prefix in ENTRY; try eassumption.
@@ -312,58 +243,106 @@ Proof using.
 
     destruct_inv 32 PRE.
 
-    - destruct PRE as (IDX & SENTRY & SENTRY_VAL & SENTRY_NEXT & A0 & A1 & MEM & 
-        NewVal & PXLH & NonNull & Len_Nz & SENTRY_NN & Cycles).
+    - destruct PRE as (IDX & SENTRY & SENTRY_VAL & SENTRY_NEXT & A0 & A1 & MEM &
+        NewVal & PXLH & NonNull & SENTRY_NN & Cycles).
         do 4 step.
-        -- exists 0%nat, pxListHead. split. assumption.
+        -- exists 0%nat, sentry. split. rewrite N.add_comm, PXLH; reflexivity.
             repeat split; auto; try now rewrite <- MEM.
             unfold portMAX_DELAY. lia. lia.
-            rewrite N.add_comm, PXLH, <- MEM. assumption.
-            apply Dst0.
+            constructor.
             hammer.
         -- repeat step. unfold portMAX_DELAY. hammer.
-    - destruct PRE as (ctr & nxt & IDX & SENTRY & SENTRY_VAL & ValueValid & PXLH_NN & 
-            MEM & A1 & A3 & Len_Nz & CtrMax & Nxt & CtrDist & S_NN & Cycles).
+    - destruct PRE as (ctr & nxt & A4 & IDX & SENTRY & SENTRY_NEXT & SENTRY_VAL & ValueValid & PXLH_NN &
+            MEM & A1 & A3 & CtrMax & CtrDist & S_NN & Cycles).
         repeat step.
-        -- hammer.  replace ctr with le_dist. lia.
-            destruct (le_cases ctr le_dist CtrMax); try lia.
-            clear - IDX MEM Len_Nz Nxt CtrDist S_NN BC H.
-            destruct IDX as (gt_node & gt_val & LeDist & LeVal & LeNextGt & GtVal & _ & Vals & _ & Lens & Sorted).
-            exfalso.
-            specialize (Sorted nxt ctr).
-            unfold list_node_next in Nxt. destruct (s' R_A4). inversion Nxt.
-            unfold p.w, p.e, p.pw, p.dw in Nxt. apply Some_inv in Nxt.
-            rewrite MEM in Nxt.
-            assert (exists v, list_node_value base_mem nxt = Some v) by admit.
-            destruct H0 as (v & H0).
-            specialize (Sorted v CtrDist H0).
-            destruct Sorted. unfold list_node_value in H0.
-            rewrite Nxt in BC. destruct nxt. inversion H0.
-            apply Some_inv in H0. unfold p.w, p.e, p.dw in H0.
-            subst v. specialize (H1 ltac:(lia)). lia.
-        -- exists (S ctr). 
-            assert (exists nxt', list_node_next base_mem nxt = Some nxt') by admit.
-            destruct H as (nxt' & H). exists nxt'.
-            split. assumption.
-            destruct IDX as (gt_node & gt_val & LeDist & LeVal & LeNextGt & GtVal & GtNN & Vals & MaxVal & Lens & Sorted).
-            repeat split; auto; try lia; try now rewrite <- MEM.
-            destruct (le_cases ctr le_dist CtrMax). lia.
-            rewrite N.ltb_ge in BC.
-            remember (base_mem Ⓓ[ base_mem Ⓓ[ 4 + s' R_A4 ]]) as nxt'val.
-            assert (Help1: node_distance base_mem pxListHead nxt' (S ctr)). {
-                eapply node_dist_inc_nwf. eassumption. assumption.
-                rewrite <- MEM. apply SENTRY. subst.
-                admit. (* true but unsure how to prove *)
+        -- (* post condition, prove timing property. *)
+            rewrite A3 in *. hammer.
+            unfold insertion_index in IDX.
+            destruct IDX as (gt_node & gt_val & LeDist & LeVal & LeNextGt & GtVal & GtNNull & NewLtGt & GtLeMax & Lens & Sorted).
+            destruct le_dist as [|le_dist']; only 1: (destruct ctr; lia).
+            destruct len; try lia.
+            destruct Sorted as [LeNew Sorted].
+            replace ctr with (S le_dist'). lia.
+            destruct (le_cases ctr (S le_dist') CtrMax); try lia.
+            erewrite <-(Sorted _ _ _ _ _ LeDist LeVal) in LeNew.
+            Unshelve. lia.
+            clear Cycles tail ACC A4 A3 A1 MEM ENTRY.
+            rewrite Bool.negb_false_iff, N.ltb_lt in BC.
+            enough (NXT':exists nxt', list_node_next base_mem nxt = Some nxt').
+            destruct NXT' as [nxt' NXT'].
+            assert (Help:node_distance base_mem sentry pxListHead (S O)). repeat (econstructor || eassumption).
+              intro. subst pxListHead. inversion SENTRY; now subst.
+            pose proof (H0:=cycle_distance_two_step SENTRY_NEXT SENTRY (Dst0 _ _) CtrDist SENTRY_NEXT NXT').
+            assert (list_node_value base_mem nxt' = Some (base_mem Ⓓ[ base_mem Ⓓ[ 4 + nxt ] ])). {
+              unfold list_node_value, list_node_next, p.e, p.w, p.dw, p.pw in NXT' |- *. destruct nxt; try discriminate. destruct nxt'; try discriminate.
+              exfalso; apply (@cycle_imp_null_no_dist (S ctr) _ _ _ SENTRY_NEXT (distance_imp_in SENTRY)).
+              econstructor; try eassumption.
+              apply Some_inv in NXT'; rewrite NXT'; reflexivity.
             }
-            assert (Help2: list_node_value base_mem nxt' = Some nxt'val) by admit.
-            specialize (Sorted _ _ _ Help1 Help2).
-            subst le_dist. apply Sorted. assumption.
-            rewrite MEM in *; clear MEM.
-            destruct (s' R_A4). inversion Nxt. unfold list_node_next in Nxt.
-                apply Some_inv in Nxt. unfold p.w, p.e, p.pw, p.dw in Nxt.
-                rewrite Nxt. assumption.
-            eapply node_dist_inc_nwf.
-                eassumption. assumption. rewrite <- MEM. apply SENTRY.
-                admit. (* same as above *)
-            hammer.
-Admitted.
+            specialize (Sorted _ _ _ _ SENTRY_NEXT H0 H1). rewrite Sorted in H. lia.
+
+            destruct nxt; try discriminate; try (eexists; reflexivity).
+            exfalso; eapply (cycle_imp_null_no_dist); try eassumption. eapply distance_imp_in; eassumption.
+        --  exists (S ctr).
+            rewrite A1 in *; clear MEM A1 A4 ENTRY.
+            assert (IDX':=IDX).
+            unfold insertion_index in IDX;
+            destruct IDX as (gt_node & gt_val & LeDist & LeVal & LeNextGt & GtVal & GtNNull & NewLtGt & GtLeMax & Lens & Sorted).
+            rewrite N.ltb_ge in BC.
+            destruct len as [|len'] eqn:EQlen;[clear Sorted|]; destruct le_dist as [|le_dist'] eqn:EQle_dist; try lia. destruct ctr; try lia.
+            inversion LeDist; inversion CtrDist; subst; rename nxt into sentry.
+            (* ctr = le_dist = = len = 0: inserting in 0-length list; contradiction because we could not have iterated *)
+            (* TODO: add a lia preprocessor to automate this. *)
+            inversion SENTRY; subst. rewrite SENTRY_NEXT in LeNextGt; inversion LeNextGt; subst gt_node.
+            unfold list_node_next in SENTRY_NEXT;
+            unfold list_node_value in GtVal; destruct sentry; try contradiction; unfold p.w, p.e, p.dw, p.pw in *.
+            apply Some_inv in SENTRY_NEXT, GtVal. rewrite SENTRY_NEXT in BC. rewrite GtVal in *. lia.
+            (* ctr = le_dist = 0; 0 < len: inserting right after sentry, find contradiction somewhere? *)
+            inversion CtrDist; subst nxt; subst; try lia.
+            exfalso; clear tail Cycles CtrMax CtrDist Lens Sorted.
+            inversion LeDist; subst le_node; inversion SENTRY; subst.
+            rewrite LeNextGt in SENTRY_NEXT; inversion SENTRY_NEXT; subst pxListHead.
+            unfold list_node_next, p.w, p.e, p.dw, p.pw in LeNextGt. destruct sentry as [|p]; try contradiction; remember (N.pos p) as sentry.
+            apply Some_inv in LeNextGt. rewrite LeNextGt in *.
+            unfold list_node_value, p.w, p.e, p.dw, p.pw in GtVal. destruct gt_node as [|p0]; try contradiction; remember (N.pos p0) as gt_node.
+            apply Some_inv in GtVal; rewrite GtVal in *; lia.
+            (* ctr = le_dist = 0; 0 <= len: iterating to find le_dist. *)
+            eexists. split; try reflexivity.
+            repeat (eassumption || lia || split); clear IDX'.
+            destruct (Nat.lt_trichotomy ctr (S le_dist')) as [Lt | [Eq | Gt]]; try lia.
+            rewrite <-Eq in *; exfalso.
+            destruct Sorted as [LeNv Sorted]. clear Cycles tail.
+            enough (H:exists nxt', list_node_next base_mem nxt = Some nxt').
+            destruct H as [nxt' NXT'].
+            pose proof (H:=cycle_distance_step SENTRY_NEXT SENTRY CtrDist NXT').
+            destruct H as [EQ | DstNxt'].
+              subst nxt'. unfold list_node_next, list_node_value, p.w, p.e, p.pw, p.dw in NXT', SENTRY_VAL. destruct nxt; try discriminate.
+              destruct sentry; try discriminate. apply Some_inv in NXT', SENTRY_VAL. rewrite NXT', SENTRY_VAL in *. lia.
+
+              clear Eq; inversion DstNxt'; subst. align_next.
+              unfold list_node_next, p.w, p.e, p.dw, p.pw in NXT'. destruct nxt; try discriminate. apply Some_inv in NXT'. rewrite NXT' in BC.
+              assert (Help:list_node_value base_mem nxt' = Some (base_mem Ⓓ[ nxt' ])). { unfold list_node_value, p.w, p.e, p.dw. destruct nxt'; try discriminate.
+              eapply (cycle_imp_null_no_dist SENTRY_NEXT) in DstNxt'. contradiction. eapply distance_imp_in; eassumption.
+              reflexivity. }
+              specialize (Sorted _ _ _ _ SENTRY_NEXT LEN Help). rewrite <-Sorted in BC; lia.
+
+              destruct nxt; try (eexists; reflexivity).
+              eapply (cycle_imp_null_no_dist SENTRY_NEXT) in CtrDist. contradiction. eapply distance_imp_in; eassumption.
+
+            (* we can combine this with the above somehow - we do the same case analysis twice. *)
+            destruct Sorted as [LeNv Sorted]. clear Cycles tail.
+            enough (H:exists nxt', list_node_next base_mem nxt = Some nxt').
+            destruct H as [nxt' NXT'].
+            pose proof (cycle_distance_step SENTRY_NEXT SENTRY CtrDist NXT').
+            destruct H as [EQ | DstNxt'].
+              subst nxt'. unfold list_node_next, list_node_value, p.w, p.e, p.pw, p.dw in NXT', SENTRY_VAL. destruct nxt; try discriminate.
+              destruct sentry; try discriminate. apply Some_inv in NXT', SENTRY_VAL. rewrite NXT', SENTRY_VAL in *. lia.
+
+              unfold list_node_next, p.w, p.e, p.dw, p.pw in NXT'. destruct nxt; try discriminate; apply Some_inv in NXT'; rewrite NXT' in *; assumption.
+
+              destruct nxt; try (eexists; reflexivity).
+              eapply (cycle_imp_null_no_dist SENTRY_NEXT) in CtrDist. contradiction. eapply distance_imp_in; eassumption.
+
+
+              hammer. rewrite A3 in *. rewrite <-N.leb_le, N.leb_antisym in BC. hammer.
+Qed.

@@ -205,6 +205,7 @@ Module Type amd64CPUTimingBehavior.
 		lea_r64_addr
 		jc_addr
 		add_r32_m32
+		shr_r16_i
 		nop
 	:N.
 End amd64CPUTimingBehavior.

@@ -414,6 +414,15 @@ Ltac compare_sums :=
       (* tryif (multiset_match L R; idtac)
       then idtac "all terms matched"
       else fail "mismatch between" L "and" R *)
+  | [|- ?lhs <= ?rhs] =>
+      let L := flatten_plus lhs in
+      let R := flatten_plus rhs in
+      (* idtac L;
+      idtac R; *)
+      multiset_match L R
+      (* tryif (multiset_match L R; idtac)
+      then idtac "all terms matched"
+      else fail "mismatch between" L "and" R *)
   end.
 
 Ltac count_occurrences x t :=

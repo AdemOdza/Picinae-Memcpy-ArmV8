@@ -66,3 +66,5 @@ x86_wcet_comparison/while_true_break/while_true_break_lifted.v
 x86_wcet_comparison/while_true_break/while_true_break_proofs.v
 x86_wcet_comparison/cache/sum_lifted.v
 x86_wcet_comparison/cache/sum_proofs.v
+x86_wcet_comparison/collatz/collatz.v
+x86_wcet_comparison/collatz/collatz_proofs.v

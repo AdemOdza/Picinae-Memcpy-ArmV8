@@ -10,9 +10,9 @@
 // }
 
 // Return whether n ends up in a collatz cycle 
-int collatz(uint16_t n) {
+uint64_t collatz(uint16_t n) {
     // int start = rdtsc();
-    int i;
+    uint64_t i;
     for (i = 0; i < 55000; i++) {
         if (n % 2 == 0)
             n /= 2;
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     collatz(52527);
     fflush(stdout);
     return 0;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 1; i < 100; i++) {
         // printf("[Trial %d]\n", i);
         collatz(i);
     }

@@ -995,4 +995,5 @@ Module i5_7300u <: amd64CPUTimingBehavior.
 	Definition nop := 999.
 	Definition jc_addr := 999.
 	Definition add_r32_m32 := 999.
+	Definition shr_r16_i := 999.
 End i5_7300u.

@@ -3,7 +3,7 @@ Require Import mod_add_same_r.
 Require Import RISCVTiming.
 Import RISCVNotations.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_ct_swap <: ProgramInformation.
     Definition entry_addr : N := 0x1e4.

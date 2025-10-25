@@ -1,5 +1,6 @@
 Require Export Picinae_amd64.
 Export X64Notations.
+Require Export amd64CPUTimingBehavior.
 Require Export TimingAutomation.
 Require Export NArith.
 Require Import ZArith.
@@ -15,10 +16,14 @@ Module Type ProgramInformation.
     Parameter time_of_addr : store -> addr -> N.
 End ProgramInformation.
 
-Module AMD64Timing (prog : ProgramInformation) <: TimingModule IL_amd64.
-    Export prog.
+Definition time_inf : N := 2^64.
 
-    Definition time_inf : N := 2^64.
+Module AMD64Timing 
+        (cpu : amd64CPUTimingBehavior) (prog : ProgramInformation) 
+        <: TimingModule IL_amd64.
+    Export cpu prog.
+
+    Definition time_inf := time_inf.
 
     Definition time_of_addr := prog.time_of_addr.
 End AMD64Timing.

@@ -256,7 +256,7 @@ Proof using.
             MEM & A1 & A3 & CtrMax & CtrDist & S_NN & Cycles).
         repeat step.
         -- (* post condition, prove timing property. *)
-            rewrite A3 in *. hammer.
+            hammer.
             unfold insertion_index in IDX.
             destruct IDX as (gt_node & gt_val & LeDist & LeVal & LeNextGt & GtVal & GtNNull & NewLtGt & GtLeMax & Lens & Sorted).
             destruct le_dist as [|le_dist']; only 1: (destruct ctr; lia).
@@ -267,7 +267,7 @@ Proof using.
             erewrite <-(Sorted _ _ _ _ _ LeDist LeVal) in LeNew.
             Unshelve. lia.
             clear Cycles tail ACC A4 A3 A1 MEM ENTRY.
-            rewrite Bool.negb_false_iff, N.ltb_lt in BC.
+            rewrite N.ltb_lt in BC.
             enough (NXT':exists nxt', list_node_next base_mem nxt = Some nxt').
             destruct NXT' as [nxt' NXT'].
             assert (Help:node_distance base_mem sentry pxListHead (S O)). repeat (econstructor || eassumption).
@@ -344,5 +344,7 @@ Proof using.
               eapply (cycle_imp_null_no_dist SENTRY_NEXT) in CtrDist. contradiction. eapply distance_imp_in; eassumption.
 
 
-              hammer. rewrite A3 in *. rewrite <-N.leb_le, N.leb_antisym in BC. hammer.
+              hammer. rewrite <-N.leb_le, N.leb_antisym in BC. hammer.
 Qed.
+
+End TimingProof.

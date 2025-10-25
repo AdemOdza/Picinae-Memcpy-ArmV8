@@ -1,6 +1,6 @@
 Require Import NArith.
 
-Module Type CPUTimingBehavior.
+Module Type RVCPUTimingBehavior.
     (* === Instruction Timings === *)
     Parameter
         (* ==== I ISA Extension ==== *)
@@ -59,4 +59,4 @@ Module Type CPUTimingBehavior.
         (* Bitwise rotation *)
             trol tror trori
     : N -> N.
-End CPUTimingBehavior.
+End RVCPUTimingBehavior.

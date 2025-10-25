@@ -3,7 +3,7 @@ Require Import RISCVTiming.
 Import RISCVNotations.
 Require Import memsolve.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_vTaskSwitchContext <: ProgramInformation.
     Definition entry_addr : N := 0x8000137c.

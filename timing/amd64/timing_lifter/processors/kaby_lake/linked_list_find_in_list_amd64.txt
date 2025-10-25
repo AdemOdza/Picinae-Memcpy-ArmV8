@@ -1,6 +1,0 @@
-Definition time_of_addr (s : store) (a : addr) : N :=
-	match a with
-		| 0x00101310	=>jmp_addr
-		| 0x00101320	=>cmp_r32_i
-		| 0x00101322	=>jz_addr
-		| 0x00101324	=>mov_r64_[m64]

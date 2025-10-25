@@ -62,7 +62,7 @@ Global Ltac elimstore :=
       try rewrite H in *; clear H; try clear s MDL
   end.
 
-Module TimingProof (cpu: CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_find_in_list <: ProgramInformation.
     Definition entry_addr : N := 0x10250.

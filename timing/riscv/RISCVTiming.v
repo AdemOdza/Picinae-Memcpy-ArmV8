@@ -1,6 +1,6 @@
 Require Export Picinae_riscv.
 Export RISCVNotations.
-Require Export CPUTimingBehavior.
+Require Export RVCPUTimingBehavior.
 Require Export TimingAutomation.
 Require Export NArith.
 Require Import ZArith.
@@ -25,7 +25,7 @@ Module Type ProgramInformation.
     Parameter binary : addr -> N.
 End ProgramInformation.
 
-Module RISCVTiming (cpu : CPUTimingBehavior) (prog : ProgramInformation) <: TimingModule IL_RISCV.
+Module RISCVTiming (cpu : RVCPUTimingBehavior) (prog : ProgramInformation) <: TimingModule IL_RISCV.
     Export cpu prog.
 
     Definition time_inf : N := 2^32.

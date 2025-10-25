@@ -2,7 +2,7 @@ Require Import array.
 Require Import RISCVTiming.
 Import RISCVNotations.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_find_in_array <: ProgramInformation.
     Definition entry_addr : N := 0x1e4.

@@ -7,7 +7,7 @@ Require Import bubble_sort.
 Require Import RISCVTiming.
 Import RISCVNotations.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_bubble_sort_theta_n2 <: ProgramInformation.
     Definition entry_addr : N := 0x1e4.

@@ -12,3 +12,8 @@ Rapitime completely locks up even with loop annotations, seemingly can't handle 
 # arraysearch
 
 
+
+## Proofs
+
+while_true_break: 5 hours
+cache proof: 30 minutes

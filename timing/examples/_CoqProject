@@ -64,3 +64,5 @@ crypto/ct_swap/ct_swap_proof.v
 
 x86_wcet_comparison/while_true_break/while_true_break_lifted.v
 x86_wcet_comparison/while_true_break/while_true_break_proofs.v
+x86_wcet_comparison/cache/sum_lifted.v
+x86_wcet_comparison/cache/sum_proofs.v

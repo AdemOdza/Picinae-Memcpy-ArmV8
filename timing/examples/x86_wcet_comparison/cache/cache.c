@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
-int sum(int* arr, int size) {
+int sum(int* arr, uint64_t size) {
     int x = 0;
     for (int i = 0; i < size; i++) {
         x += arr[i];

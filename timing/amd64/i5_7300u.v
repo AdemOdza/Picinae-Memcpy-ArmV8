@@ -994,4 +994,5 @@ Module i5_7300u <: amd64CPUTimingBehavior.
 	Definition lea_r64_addr := 999.
 	Definition nop := 999.
 	Definition jc_addr := 999.
+	Definition add_r32_m32 := 999.
 End i5_7300u.

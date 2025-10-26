@@ -72,7 +72,10 @@ Inductive x64var :=
   (* These meta-variables model page access permissions: *)
   | A_READ | A_WRITE
   (* Temporaries introduced by the lifter: *)
-  | V_TEMP (n:N).
+  | V_TEMP (n:N)
+  (* Picinae does **not** use RIP for control flow. We include it for compatibility
+     with some of Ghidra's instruction representations (e.g., RET). *)
+  | R_RIP.
 
 (* Declare the types (i.e., bitwidths) of all the CPU registers: *)
 Definition x64typctx v :=
@@ -82,7 +85,7 @@ Definition x64typctx v :=
   | R_CS | R_DS | R_ES | R_FS | R_GS | R_SS => Some 16
   | R_FPU_CONTROL => Some 16
   | R_ST0 | R_ST1 | R_ST2 | R_ST3 | R_ST4 | R_ST5 | R_ST6 | R_ST7 => Some 80
-  | R_RAX | R_RBX | R_RCX | R_RDX | R_RDI | R_RSI => Some 64
+  | R_RAX | R_RBX | R_RCX | R_RDX | R_RDI | R_RSI | R_RIP => Some 64
   | R_RSP | R_RBP => Some 64
   | R_R8 | R_R9 | R_R10 | R_R11 | R_R12 | R_R13 | R_R14 | R_R15 => Some 64
   | R_FS_BASE | R_GS_BASE => Some 64

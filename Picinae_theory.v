@@ -906,7 +906,7 @@ Lemma Z2N_inj_lxor:
   forall z1 z2, (0 <= z1 -> 0 <= z2 -> Z.to_N (Z.lxor z1 z2) = N.lxor (Z.to_N z1) (Z.to_N z2))%Z.
 Proof.
   intros. destruct z1, z2; try (reflexivity + contradiction).
-  apply N2Z.id. 
+  apply N2Z.id.
 Qed.
 
 Lemma N2Z_inj_ldiff:
@@ -920,7 +920,7 @@ Lemma Z2N_inj_ldiff:
   forall z1 z2, (0 <= z1 -> 0 <= z2 -> Z.to_N (Z.ldiff z1 z2) = N.ldiff (Z.to_N z1) (Z.to_N z2))%Z.
 Proof.
   intros. destruct z1, z2; try (reflexivity + contradiction).
-  apply N2Z.id. 
+  apply N2Z.id.
 Qed.
 
 Lemma N2Z_inj_shiftl:
@@ -2215,7 +2215,7 @@ Qed.
 Theorem toZ_shiftl:
   forall w n1 n2, toZ w (N.shiftl n1 n2) = canonicalZ (Z.of_N w) (Z.shiftl (Z.of_N n1) (Z.of_N n2)).
 Proof.
-  intros. unfold toZ. rewrite N2Z_inj_shiftl. reflexivity. 
+  intros. unfold toZ. rewrite N2Z_inj_shiftl. reflexivity.
 Qed.
 
 Theorem shiftr_sbop:
@@ -2423,7 +2423,7 @@ Proof.
           split. exact H1. exact H2.
         rewrite Z.ones_spec_high.
           rewrite !Bool.andb_false_r. reflexivity.
-          split. apply N2Z.is_nonneg. exact H2.  
+          split. apply N2Z.is_nonneg. exact H2.
     rewrite N2Z.id. reflexivity.
     apply hibits_signed_range. intros. rewrite !Z.lxor_spec.
       repeat erewrite (signed_range_hibits i w _ (toZ_bounds w _) H). reflexivity.
@@ -3128,7 +3128,7 @@ Proof.
         revert H. apply N.nlt_ge, H2.
         revert H'. apply N.nle_gt, H2.
     split.
-      apply N.nle_gt. intro H'. revert H. apply N.nlt_ge. apply le_msub_iff. left. exact H'. 
+      apply N.nle_gt. intro H'. revert H. apply N.nlt_ge. apply le_msub_iff. left. exact H'.
       edestruct N.le_gt_cases.
         left. eassumption.
         right. apply N.nle_gt. intro H'. revert H. apply N.nlt_ge, le_msub_iff.
@@ -3250,7 +3250,7 @@ Proof.
   intros. destruct (N.le_gt_cases y w).
     rewrite N.shiftr_div_pow2. apply N.Div0.div_lt_upper_bound.
       rewrite <- N.pow_add_r, N.add_sub_assoc, N.add_comm, N.add_sub; assumption.
-    destruct x as [|x]. 
+    destruct x as [|x].
       rewrite N.shiftr_0_l. apply mp2_gt_0.
       rewrite N.shiftr_eq_0. apply mp2_gt_0. apply N.log2_lt_pow2.
         reflexivity.
@@ -5998,7 +5998,7 @@ Proof.
           apply nextinv_nocode; assumption.
       apply nextinv_noinv; assumption.
     apply nextinv_raise. inversion NI; subst.
-      simpl in TRU. destruct (Invs _). assumption. destruct (xp _); assumption. 
+      simpl in TRU. destruct (Invs _). assumption. destruct (xp _); assumption.
 Qed.
 
 Theorem prove_invs':
@@ -6513,6 +6513,7 @@ Module Type LinkedListParams.
   Global Transparent w e dw pw.
 End LinkedListParams.
 
+(* TODO: change node names to the a-b-c-m-m'-z theme. *)
 Module LinkedLists (P:LinkedListParams).
 Import P.
 Global Transparent w e dw pw.
@@ -6611,13 +6612,12 @@ Ltac align_next :=
     rewrite H1 in H2; injection H2; intro temp; subst n2; clear H2
   end.
 
-Theorem node_distance_uniq:
-  forall mem src dst len1 len2,
+Theorem node_distance_uniq {mem src dst len1 len2}:
     node_distance mem src dst len1 ->
     node_distance mem src dst len2 ->
     len1 = len2.
 Proof.
-  intros mem src dst len1 len2 H; revert len2.
+  intros H; revert len2.
   induction H; intros len2 L2.
   - inversion L2; subst.
       reflexivity.
@@ -6628,13 +6628,12 @@ Proof.
       now rewrite (IHnode_distance len0).
 Qed.
 
-Theorem node_distance_uniq':
-  forall mem src dst1 len1 dst2 len2,
+Theorem node_distance_uniq' {mem src dst1 len1 dst2 len2}:
     node_distance mem src dst1 len1 ->
     node_distance mem src dst2 len2 ->
     len1 = len2 -> dst1 = dst2.
 Proof.
-  intros mem src dst1 len1 dst2 len2 H; revert dst2 len2 .
+  intros H; revert dst2 len2 .
   induction H; intros dst2 len2 L2.
   - inversion L2; subst.
       reflexivity.
@@ -6741,8 +6740,8 @@ Proof.
   - destruct IHIN. exists (S x). econstructor; try eassumption.
 Qed.
 
-Theorem node_dist_imp_node_in:
-  forall mem head n dist (DIST:node_distance mem head n dist),
+Theorem node_dist_imp_node_in {mem head n dist}:
+  forall (DIST:node_distance mem head n dist),
     node_in_linked_list mem head n.
 Proof.
   intros; dependent induction DIST.
@@ -6800,7 +6799,7 @@ Proof.
     align_next. specialize (IHHNULL (JMeq_refl NULL) _ _ LEN). simpl. assumption.
 Qed.
 
-Theorem cycle_imp_null_no_dist:
+Theorem cycle_imp_null_no_dist':
   forall i mem a b
     (NEQ: a <> b)
     (AB: node_in_linked_list mem a b)
@@ -6821,6 +6820,17 @@ Proof.
   now intro.
 Qed.
 
+Theorem cycle_imp_null_no_dist {i mem a b}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_in_linked_list mem b a),
+  ~ node_distance mem a NULL i.
+Proof.
+  destruct (N.eq_dec a b).
+    intros BA AB H; inversion H; subst; try discriminate. align_next; pose proof (node_distance_uniq H LEN); lia.
+    intros; eapply cycle_imp_null_no_dist'; repeat (eassumption || econstructor).
+Qed.
+
 Theorem cycle_imp_null_not_in:
   forall mem a b
     (NEQ: a <> b)
@@ -6829,7 +6839,7 @@ Theorem cycle_imp_null_not_in:
   ~ node_in_linked_list mem a NULL.
 Proof.
   intros. rewrite <-no_dist_iff_not_in; intros i.
-  eapply cycle_imp_null_no_dist; eassumption.
+  eapply cycle_imp_null_no_dist'; eassumption.
 Qed.
 
 Theorem cycle_imp_not_wf:
@@ -7107,8 +7117,7 @@ Proof.
   intros. inversion LEN; subst; intro; align_next. inversion LEN0; subst; try easy.
 Qed.
 
-Theorem distance_imp_in:
-  forall mem head dst len,
+Theorem distance_imp_in {mem head dst len}:
     node_distance mem head dst len -> node_in_linked_list mem head dst.
 Proof.
   intros. dependent induction H;[constructor|rename IHnode_distance into IH].
@@ -7116,7 +7125,7 @@ Proof.
 Qed.
 
 Theorem next_node_in_linked_list:
-  forall mem head n next 
+  forall mem head n next
     (NEXT: list_node_next mem n = Some next)
     (IN:node_in_linked_list mem head n),
   node_in_linked_list mem head next.
@@ -7157,41 +7166,434 @@ Qed.
             X -> X' -> Y' -> _ -> _ -> _ -> Y
                         ^--------------------+
 *)
-Theorem node_distance_next_next_same:
-  forall mem head head' (dst dst':addr) len
-    (HEAD': list_node_next mem head = Some head')
-    (DST': list_node_next mem dst = Some dst')
-    (WF: well_formed_list mem head)
-    (LEN: node_distance mem head dst len),
-  node_distance mem head' dst' len.
+(* TODO: rename to `node_distance_step` *)
+Theorem node_distance_next_next_same {mem a b m m' len}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (M': list_node_next mem m = Some m')
+    (WF: well_formed_list mem a)
+    (LEN: node_distance mem a m len),
+  node_distance mem b m' len.
 Proof.
-  intros mem head head' dst dst' len. gdep dst'; gdep dst; gdep head'; gdep head; gdep mem.
+  gdep m'; gdep m; gdep b; gdep a; gdep mem.
   induction len.
   {
     intros. inversion LEN; subst. align_next. constructor.
   }
   {
     intros. rename IHlen into IH.
-    destruct (N.eq_dec head NULL);[inversion LEN; now subst|].
-    destruct (list_node_next mem head') as [head''|] eqn:E;cycle 1.
-    { (* head' = NULL *)
-      destruct head';[|discriminate]. inversion LEN; subst; align_next.
+    destruct (N.eq_dec a NULL);[inversion LEN; now subst|].
+    destruct (list_node_next mem b) as [b'|] eqn:E;cycle 1.
+    { (* b = NULL *)
+      destruct b;[|discriminate]. inversion LEN; subst; align_next.
       inversion LEN0; subst; discriminate.
     }
-    move head before dst; move head'' before head'; move E before HEAD'.
+    move a before m; move b' before b; move E before b.
     eapply DstSn; try eassumption; try easy.
-      intros H; subst dst'.
-      enough (~well_formed_list mem head').
+      intros H; subst m'.
+      enough (~well_formed_list mem b).
       inversion WF; subst; [discriminate|align_next; contradiction].
       inversion LEN; subst; align_next.
-      pose proof (next_node_in _ _ _ DST') as Help.
+      pose proof (next_node_in _ _ _ M') as Help.
       apply node_dist_imp_node_in in LEN0.
-      destruct (N.eq_dec head' dst).
+      destruct (N.eq_dec b m).
         subst. now eapply one_cycle_imp_not_wf.
         eapply cycle_imp_not_wf; try eassumption.
       eapply IH; try eassumption.
         inversion WF; subst;[contradiction|align_next;assumption].
         inversion LEN; subst; align_next; assumption.
+  }
+Qed.
+
+Lemma Some_inv : forall (X : Type) (x y : X),
+    Some x = Some y -> x = y.
+Proof. intros. now inversion H. Qed.
+
+Theorem node_dist_tri {mem a m z lenam lenaz}:
+    (lenam <= lenaz)%nat ->
+    node_distance mem a m lenam ->
+    node_distance mem a z lenaz ->
+  node_distance mem m z (lenaz-lenam)%nat.
+Proof.
+  intros. gdep lenam; gdep m. induction H1; intros.
+    destruct lenam. inversion H0; simpl; now subst. lia.
+    rename next into b, src into a, dst into z, len into lenbz.
+    inversion H1; subst.
+      destruct lenam. inversion H0; subst. simpl. econstructor; try eassumption.
+        destruct lenam; try lia. inversion H0; subst. inversion LEN; subst. rewrite NEXT0 in NEXT; inversion NEXT; subst m. simpl; constructor.
+      rename next into c; move b before mem; move c before b; move len before z; move lenam before len.
+      move NEQ0 before NEQ; move m before z; move NEXT0 before NEXT.
+      rename IHnode_distance into IH.
+      inversion H0; subst.
+        simpl. econstructor; eassumption.
+        rewrite NEXT in NEXT1; inversion NEXT1; subst next; clear NEXT1; rename len0 into lenbm.
+        assert (Help: (lenbm <= S len)%nat) by lia.
+        specialize (IH _ _ Help LEN0).
+        simpl in *. assumption.
+Qed.
+
+Theorem exist_node_le_dist:
+  forall m a z len
+    (D: node_distance m a z (S len)),
+  forall l (H: (l <= S len)%nat), exists n, node_distance m a n l.
+Proof.
+  intros m a z len; gdep m; gdep a; gdep z; induction len; intros.
+    destruct l;[exists a; econstructor|inversion D; subst]. destruct l; try lia; inversion LEN; subst; exists z; assumption.
+    inversion D; subst. rename IHlen into IH; specialize (IH _ _ _ LEN).
+    set (Nat.pred l) as predl. assert (Help: (predl <= S len)%nat) by lia.
+    specialize (IH _ Help). destruct IH as [n D'].
+    destruct l;[exists a; econstructor| exists n].
+    eapply DstSn; try eassumption. intro H0; subst n. simpl in predl; subst predl; move z before a; move l before len.
+    enough (Help2:node_distance m a z (S len - l)%nat).
+    pose proof (node_distance_uniq D Help2); lia.
+    rename a into a, next into b.
+    pose proof (node_dist_tri Help D' LEN).
+    pose proof (node_distance_uniq H0 D).
+    lia.
+Qed.
+
+Theorem node_dist_cycle_bound {m a z len innode inlen}:
+    node_distance m a z len ->
+    list_node_next m z = Some a ->
+    node_distance m a innode inlen ->
+    (inlen <= len)%nat.
+Proof.
+  intros. destruct (Nat.le_ge_cases inlen len) as [Le | Ge]; try assumption.
+  destruct (N.eq_dec z innode).
+    subst innode. rewrite (node_distance_uniq H H1) in *. lia.
+    pose proof (node_dist_tri Ge H H1).
+    assert (node_distance m z innode (S inlen)).
+      eapply DstSn; try eassumption.
+      pose proof (node_distance_uniq H2 H3); lia.
+Qed.
+
+Theorem node_dist_cycle_bound' {m a b len innode inlen}:
+    node_distance m b a len ->
+    list_node_next m a = Some b ->
+    node_distance m a innode inlen ->
+    (inlen <= len)%nat.
+Proof.
+  intros. destruct (Nat.le_gt_cases inlen len) as [Le | Gt]; try assumption.
+  destruct (N.eq_dec b innode).
+    subst innode. inversion H1; subst; try align_next; try lia.
+    inversion LEN; subst; try lia. destruct len; try lia. inversion H; now subst.
+
+    inversion H1; subst; align_next || lia.
+    destruct (N.eq_dec a b); try subst b. pose proof (node_distance_uniq H1 LEN); lia.
+    assert (Help: (len <= len0)%nat) by lia.
+    pose proof (node_dist_tri Help H LEN).
+    pose proof (node_distance_uniq H2 H1). lia.
+Qed.
+
+Theorem next_node_inc_dist_or_same {len mem a b n}:
+  forall
+    (D:node_distance mem a b len)
+    (NEXT: list_node_next mem b = Some n)
+    (NEQ: b <> n),
+    node_distance mem a n (S len) \/ exists i, (i<=len)%nat /\ node_distance mem a n i.
+Proof.
+    intros. induction D.
+    - destruct (N.eq_dec node n). now right.
+        left. econstructor. eassumption. assumption. constructor.
+    - specialize (IHD NEXT NEQ). destruct IHD as [H | [i [LE NEXTN]]];
+        rename src into a, dst into b.
+        destruct (N.eq_dec a n). right; exists 0%nat; split; try lia; subst; constructor. left; econstructor; eauto.
+        destruct (N.eq_dec a n); right;[subst; exists 0%nat| exists (S i)]; split; try lia; econstructor; eauto.
+Qed.
+
+(* Very difficult proof. *)
+Theorem node_dist_inc_nwf {m a b b' sentry len slen}:
+  forall
+    (LSD: node_distance m a b len)
+    (B': list_node_next m b = Some b')
+    (LSSen: node_distance m a sentry slen)
+    (LT: (len < slen)%nat),
+  node_distance m a b' (S len).
+Proof.
+  intros. destruct slen; try lia.
+  destruct (N.eq_dec b b').
+    subst. pose proof (LE:=LT); apply Nat.lt_le_incl in LE.
+    pose proof (node_dist_tri LE LSD LSSen) as H; clear LE.
+    pose proof (Dst0 m b') as H0.
+    pose proof (node_dist_cycle_bound H0 B' H).
+    lia.
+
+    destruct (next_node_inc_dist_or_same LSD B' n) as [Slen | [i [LE Di]]];[assumption | exfalso].
+    assert (LEiz: (i <= (S slen))%nat) by lia.
+    pose proof (node_dist_tri LE Di LSD) as Lb'b.
+    pose proof (node_dist_tri LEiz Di LSSen) as Contra.
+    pose proof (node_dist_cycle_bound Lb'b B' Contra).
+    lia.
+Qed.
+
+Theorem next_node_exists {mem a z lenaz m lenam}:
+  forall
+    (LZ: node_distance mem a z lenaz)
+    (LM: node_distance mem a m lenam)
+    (LT: (lenam < lenaz)%nat),
+  exists n, list_node_next mem m = Some n.
+Proof.
+  intros. gdep z; gdep lenaz.
+  destruct (N.eq_dec a NULL).
+    intros; inversion LM; inversion LZ; subst; discriminate || lia.
+  induction LM.
+    intros. inversion LZ; subst; try lia.
+    exists next. assumption.
+
+    intros; destruct lenaz; try lia.
+    destruct (N.eq_dec next NULL).
+      subst. inversion LM; subst; try discriminate. inversion LZ; subst. rewrite NEXT in NEXT0; inversion NEXT0; subst next.
+      inversion LEN; subst. lia. discriminate.
+
+      inversion LZ; subst. align_next.
+      assert (Help: (len < lenaz)%nat) by lia.
+      specialize (IHLM n0 _ Help _ LEN). exact IHLM.
+Qed.
+
+Theorem one_cycle_all_same {mem a b}:
+    list_node_next mem a = Some a ->
+    node_in_linked_list mem a b ->
+    b = a.
+Proof.
+  intros. induction H0; subst.
+    easy.
+    align_next. now apply IHnode_in_linked_list.
+Qed.
+
+Theorem one_cycle_all_same' {mem a b len}:
+    list_node_next mem a = Some a ->
+    node_distance mem a b len ->
+    b = a.
+Proof.
+  intros; eapply one_cycle_all_same; try eassumption. eapply distance_imp_in. eassumption.
+Qed.
+
+(* This theorem states the distance all the way around the list is the same
+   regardless of your starting node, m', and your ending node m, given you
+   know a pair of nodes, a and b, defining the length of the cycle. *)
+Theorem cycle_distance_shift {mem a b len m m'}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_distance mem b a len)
+    (INM: node_in_linked_list mem a m)
+    (M': list_node_next mem m = Some m'),
+  node_distance mem m' m len.
+Proof.
+  intros AB BA INM; gdep b; gdep len; gdep m'.
+  induction INM.
+    intros; rename node into a. align_next; assumption.
+    intros. align_next. rename head into a, node into m, next into b.
+    inversion BA; subst.
+    eapply IHINM; try eassumption.
+    rename next into c.
+    eapply IHINM; try eassumption.
+    destruct (N.eq_dec b c).
+    exfalso; subst c. inversion LEN; try contradiction; subst. align_next. pose proof (node_distance_uniq LEN LEN0); lia.
+    clear IHINM M' INM. move b before mem; move c before b; move m' before c; move n before NEQ; move NEQ0 before n; move len0 before a.
+    move NEXT0 before NEXT; move BA after LEN.
+    assert (H: exists d, node_distance mem c b d). {
+      apply node_in_imp_node_dist, node_in_linked_list_trans with (m:=a).
+        eapply node_dist_imp_node_in; eassumption.
+        eapply NodeInTail; eassumption || lia || constructor.
+    }
+    destruct H as [d CB].
+    destruct (Nat.lt_trichotomy d (S len0)) as [Lt | [Eq | Gt]]; subst; try assumption; exfalso.
+      assert (Help: (d<=len0)%nat) by lia.
+      pose proof (node_dist_tri Help CB LEN).
+      pose proof (node_distance_uniq H BA). lia.
+
+      assert (Help: (len0<=d)%nat) by lia.
+      pose proof (H:=node_dist_tri Help LEN CB).
+      inversion H; subst; align_next; try lia. inversion LEN0; try lia.
+Qed.
+
+(* Very hard theorem. *)
+(* Inside of a cycle, stepping the destination node increments the distance or
+   results in wrapping around to the start. *)
+Theorem cycle_distance_step {mem a b m m' len lenam}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_distance mem b a len)
+    (AM: node_distance mem a m lenam)
+    (M': list_node_next mem m = Some m'),
+  m' = a \/ node_distance mem a m' (S lenam).
+Proof.
+  intros. destruct (N.eq_dec m' a).
+    left; assumption.
+    right. gdep len; gdep b; gdep m'. induction AM. rename node into a. intros. eapply DstSn with (next:=m'); try eassumption || lia. constructor.
+    intros. align_next. rename next into b, src into a, dst into m, len0 into lenba, len into lenbm.
+    move b before mem; move m' before b; move lenba before lenbm; move n before NEQ.
+    assert (B':exists b', list_node_next mem b = Some b'). {
+      destruct b. inversion BA; subst; discriminate.
+      eexists; reflexivity.
+    } destruct B' as [b' B'].
+    eapply DstSn; try eassumption || lia.
+    eapply IHAM; try eassumption || lia.
+    intro; subst m'. clear IHAM.
+      (* because of M' the distance lenbm in AM must be the same as the cycle distance lenba,
+         because the distances are the same m and a are the same, this contradicts NEQ. *)
+      assert (MinA:node_in_linked_list mem a m). {
+        eapply node_in_linked_list_trans.
+        eapply NodeInTail.
+          symmetry; exact n.
+          eassumption.
+          constructor.
+          eapply node_dist_imp_node_in; eassumption.
+      }
+      epose proof (cycle_distance_shift NEXT BA MinA M').
+      erewrite (node_distance_uniq' BA H _) in NEQ; contradiction.
+      eapply (cycle_distance_shift NEXT BA _ B'); try eassumption.
+      Unshelve.
+      destruct (N.eq_dec a b); subst;
+      econstructor; try eassumption; try constructor.
+      destruct (N.eq_dec a b); subst;
+      econstructor; try eassumption; try constructor.
+Qed.
+
+Theorem cycle_exists_next {mem a b m len lenam}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_distance mem b a len)
+    (AM: node_distance mem a m lenam),
+  exists m', list_node_next mem m = Some m'.
+Proof.
+  intros. destruct a. discriminate.
+    destruct m.  eapply cycle_imp_null_no_dist in AM. lia. eassumption. eapply distance_imp_in; eassumption.
+      eexists; unfold list_node_next. reflexivity.
+Qed.
+
+Theorem cycle_shift_one_exists {mem a b len}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_distance mem b a len),
+  exists c, list_node_next mem b = Some c /\ node_distance mem c b len.
+Proof.
+  intros. destruct (N.eq_dec a b).
+    subst b; exists a; split; assumption.
+    assert (AM:node_distance mem a b (S O)). repeat (econstructor || eassumption).
+    destruct (cycle_exists_next AB BA AM) as [c C]. exists c; split; try assumption.
+    apply (cycle_distance_shift AB BA (node_dist_imp_node_in AM) C).
+Qed.
+
+(* Very hard theorem. *)
+(* This theorem states that inside of a cycle, list_node_next is injective.
+   I.e., if any two nodes in the cycle have the same successor, then those two nodes
+   are actually the same. *)
+Theorem cycle_next_node_uniq {mem a b m n len lenam lenan}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_distance mem b a len)
+    (AM: node_distance mem a m lenam)
+    (AN: node_distance mem a n lenan),
+    list_node_next mem m = list_node_next mem n <->
+    m = n.
+Proof.
+  split; intros; only 2: (subst; reflexivity).
+    destruct (N.eq_dec a b) as [EQ | NEQAB]. subst b.
+    rewrite (one_cycle_all_same' AB AM) in *; rewrite (one_cycle_all_same' AB AN) in *; reflexivity.
+    destruct (cycle_exists_next AB BA AM) as [m' M'].
+    pose proof (H0:=cycle_distance_step AB BA AM M').
+    destruct H0 as [WRAP | STEP].
+    { (* a ~~> m/n -> a *)
+      subst.
+      inversion AM; subst m; subst. align_next. inversion AN; subst; try reflexivity; align_next. pose proof (node_distance_uniq LEN AN); lia.
+      align_next; rename dst into m. move len0 before len; move m before n; move M' before AB; move LEN before AN.
+      rewrite M' in H; symmetry in H; move H before M'; rename H into N', LEN into BM.
+      destruct (cycle_shift_one_exists AB BA) as [c [BC CB]].
+      destruct (cycle_distance_step BC CB BM M') as [F |BA']; only 1: contradiction.
+      inversion AN; subst n; subst. align_next. inversion AN; subst; try reflexivity; align_next. pose proof (node_distance_uniq BM AM); lia.
+      align_next; rename dst into n. move n before m; move len1 before len0; move c before mem; move NEQ0 before NEQAB.
+      move BM before BA; move BA' before BM; move LEN before BA'; move CB before AN; move BC before AB.
+      rename LEN into BN.
+      destruct (cycle_distance_step BC CB BN N') as [F |BA'']; only 1: contradiction.
+      pose proof (node_distance_uniq BA BA'). subst len.
+      pose proof (node_distance_uniq BA BA''). rewrite H in *.
+      pose proof (node_distance_uniq' AM AN (eq_refl _)).
+      assumption.
+    }
+    rewrite H in M'.
+    pose proof (H0:=cycle_distance_step AB BA AN M').
+    destruct H0 as [WRAP | STEPN].
+      inversion STEP; subst; contradiction.
+    pose proof (node_distance_uniq STEP STEPN). inversion H0. subst lenam.
+    rewrite (node_distance_uniq' AM AN (eq_refl _)).
+    reflexivity.
+Qed.
+
+(* Given c and d in a cycle, stepping both forward preserves their distance. *)
+Theorem cycle_distance_two_step {mem a b len c d lenac lencd c' d'}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (BA: node_distance mem b a len)
+    (AC: node_distance mem a c lenac)
+    (CD: node_distance mem c d lencd)
+    (C': list_node_next mem c = Some c')
+    (D': list_node_next mem d = Some d'),
+  node_distance mem c' d' lencd.
+Proof.
+  intros. inversion CD; subst.
+    align_next. constructor.
+    align_next.
+    pose proof (cycle_distance_shift AB BA (distance_imp_in AC) C') as C'C.
+    destruct (cycle_distance_step C' C'C CD D') as [EQ | CD'].
+    subst d'.
+      assert (DinA:node_in_linked_list mem a d). {
+        eapply node_in_linked_list_trans; eapply distance_imp_in. exact AC. exact CD.
+      }
+      pose proof (cycle_distance_shift AB BA DinA D'). rewrite (node_distance_uniq CD H) in *. assumption.
+
+      inversion CD'; subst; align_next. assumption.
+Qed.
+
+(* Stepping forward from the start of the list and the destination preserves distance.
+   Needs to happen in a cycle, otherwise stepping from the destination may actually
+   get you closer to the source.
+
+   Inside a cycle:
+            a -> b ~~~> y -> z ~+
+            ^                   s
+            +~~~~~~~~~~~~~~~~~~~+
+*)
+Theorem node_distance_step_nwf {mem a b y z lenay lenba}:
+  forall
+    (AB: list_node_next mem a = Some b)
+    (YZ: list_node_next mem y = Some z)
+    (BA: node_distance mem b a lenba)
+    (AY: node_distance mem a y lenay)
+    (LE: (lenay <= lenba)%nat),
+  node_distance mem b z lenay.
+Proof.
+  gdep a; gdep z; gdep y; gdep b; gdep mem; gdep lenba.
+  induction lenay.
+  {
+    intros. inversion AY; subst. align_next. constructor.
+  }
+  {
+    intros. rename IHlenay into IH.
+    destruct (N.eq_dec a b) as [EQAB | NEQAB]. {
+      subst b; clear IH.
+      pose proof (H:=one_cycle_all_same AB (distance_imp_in AY)); rewrite H in *.
+      inversion AY; now subst.
+    }
+    destruct (N.eq_dec a NULL);[inversion AY; now subst|].
+    destruct (list_node_next mem b) as [c|] eqn:E;cycle 1.
+    { (* b = NULL *)
+      destruct b;[|discriminate]. inversion AY; subst; align_next.
+      inversion LEN; subst; discriminate.
+    }
+    move lenba before lenay; move b before lenba; move mem before b; move z before b; move c before b; move y before c; move a before y; move n before IH.
+    eapply DstSn; try eassumption; try easy.
+      intro; subst z.
+      pose proof (cycle_next_node_uniq AB BA AY (Dst0 mem a)) as INJ; destruct INJ as [FWD _].
+      rewrite FWD in *; try easy; inversion AY; subst; try easy. rewrite AB, YZ; reflexivity.
+
+      eapply @cycle_distance_two_step with (c:=b) (d:=y).
+        exact AB.
+        exact BA.
+        repeat (econstructor || eassumption).
+        inversion AY; subst; align_next; assumption.
+        assumption.
+        assumption.
   }
 Qed.
 
@@ -7224,7 +7626,7 @@ Proof.
     econstructor; try eassumption; try easy.
     (* Well-formedness contradiction subproof. *)
     { intro.
-      assert (Help:=distance_imp_in _ _ _ _ LEN).
+      assert (Help:=distance_imp_in LEN).
       assert (WFDST:=in_well_formed_imp_well_formed _ _ _ WF Help).
       move n after DST'; move WF before WFDST; move H after LEN; move head' before dst'.
       assert (Help3:=well_formed_imp_not_in _ _ _ DST' WFDST).
@@ -7290,8 +7692,8 @@ Proof.
   {
     subst dst. exfalso.
     eapply well_formed_imp_not_in; try eassumption.
-    assert (IN1:=distance_imp_in _ _ _ _ PRE);
-    assert (IN2:=distance_imp_in _ _ _ _ POST).
+    assert (IN1:=distance_imp_in PRE);
+    assert (IN2:=distance_imp_in POST).
     apply node_in_linked_list_trans with (m:=m); try easy.
   }
   {
@@ -7635,6 +8037,49 @@ Proof.
       eapply NodeInTail; easy.
 Qed.
 
+Theorem wf_iff_nul:
+  forall mem head,
+  well_formed_list mem head <-> node_in_linked_list mem head NULL.
+Proof.
+  split.
+    apply wf_has_null.
+    apply has_null_wf.
+Qed.
+
+Theorem nwf_nnul:
+  forall mem head,
+    (~ well_formed_list mem head) -> ~ node_in_linked_list mem head NULL.
+Proof.
+  intros. now rewrite <-wf_iff_nul.
+Qed.
+
+Theorem node_not_in_list_forall_diff:
+  forall mem head n, ~ node_in_linked_list mem head n -> LLForall (fun _ a => a <> n) mem head.
+Proof.
+  cofix IH.
+  intros. destruct (N.eq_dec head NULL);[subst head; constructor|].
+  destruct (list_node_next mem head)  as [next|] eqn:EQ.
+    econstructor; try eassumption. intro; subst head; apply H; constructor.
+    apply IH. intro. apply H. econstructor; try eassumption. intro; subst head; apply H; constructor.
+    destruct head; discriminate || contradiction.
+Qed.
+
+Theorem dist_next_all_nnul:
+  forall mem a z len
+    (LEN:node_distance mem a z len)
+    (NX: list_node_next mem z = Some a),
+  LLForall (fun m' a' => a' <> NULL) mem a.
+Proof.
+  intros.
+  apply node_not_in_list_forall_diff.
+  apply nwf_nnul.
+  destruct (N.eq_dec a z).
+    subst z; now apply one_cycle_imp_not_wf.
+    eapply cycle_imp_not_wf; try eassumption.
+    eapply node_dist_imp_node_in; eassumption.
+    econstructor; try easy; try eassumption; constructor.
+Qed.
+
 End ll_section.
 (* Override psimpl_hook using `Ltac psimpl_hook ::= psimpl.` To enable
    the psimplifier.  This is a workaround to keep the theory library independent
@@ -7658,7 +8103,7 @@ Global Ltac llsame_solve :=
             || match goal with [H:LLSame ?ml ?mr ?a |- LLSame ?mr ?ml ?a] => rewrite llsame_symmetry; apply H end).
 
 Global Ltac inj_nodeval :=
-  match goal with 
+  match goal with
   | [H: Some ?x = list_node_value _ ?n |- _] => let p := fresh "p" in unfold list_node_value in H; destruct n as [|p]; idtac "destr"; [
       try discriminate; try contradiction; idtac n "could be NULL"
       | injection H; intro; remember (N.pos p) as n]
@@ -7683,8 +8128,8 @@ Global Ltac align_next :=
 
 Global Ltac llforall_solve :=
   repeat (
-    (now apply llsame_symmetry) 
-  || match goal with 
+    (now apply llsame_symmetry)
+  || match goal with
      | [H: LLForall (fun _ _ => ~ overlap _ _ ?nw ?pbig ?lenbig) ?base_mem ?h
      |- LLForall (fun _ _ => ~ overlap _ _ ?nw ?pbig ?lenbig) (setmem _ _ ?len ?mem ?p _) ?h] =>
          eapply (noverlap_llforall_trans_shrink _ _ _ _ _ _ _ _ H); try lia; try llsame_solve

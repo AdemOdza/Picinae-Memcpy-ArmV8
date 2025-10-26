@@ -4,4 +4,5 @@ riscv/ProgramInformation.v
 riscv/CPUTimingBehavior.v
 riscv/RISCVTiming.v
 riscv/NEORV32.v
+amd64/AMD64Timing.v
 memsolve.v

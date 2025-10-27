@@ -14,6 +14,9 @@ data_structures/array/find_in_array_opt/find_in_array_opt_proof.v
 # data_structures/array/bubble_sort/exact_bound_oracle/bubble_sort_theta_n2_proof_exact.v
 # data_structures/array/bubble_sort/exact_bound_sum/bubble_sort_theta_n2_proof_exact.v
 
+data_structures/array/binary_search/binary_search.v
+data_structures/array/binary_search/binary_search_proofs.v
+
 # data_structures/linked_list/find_in_list_general/linked_list_general.v
 # data_structures/linked_list/find_in_list_general/find_in_list.v
 data_structures/linked_list/linked_list.v

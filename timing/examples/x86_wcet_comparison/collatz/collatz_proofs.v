@@ -80,18 +80,6 @@ Definition time_of_collatz (t : trace) :=
       (* even branch: shr, cmp, jnz *)
       (shr_r16_i + cmp_r16_i + jnz_addr) +
 
-    (* test_r8_i + jz_addr +
-    if even n then (
-        shr_r16_i + cmp_r16_i + jnz_addr +
-        if n / 2 =? 1 then ret else 0
-    ) else (
-        add_r32_i + lea_r64_addr + cmp_r32_i + jz_addr +
-        shr_r16_i + cmp_r16_i + jnz_addr +
-        if (3 * n + 1) / 2 =? 1 then ret else 0
-    ) + 55000 * (
-        add_r32_i + cmp_r32_i + jz_addr + test_r8_i +
-    ) *)
-
     (* each iteration up to iters steps *)
     55000 * (
       (* increment and overflow check *)

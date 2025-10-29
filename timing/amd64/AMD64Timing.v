@@ -7,16 +7,21 @@ Require Export Lia.
 Require Import List.
 Import ListNotations.
 
+Definition cache : Type := unit.
+
 Module Type ProgramInformation.
     Parameter entry_addr : addr.
     Parameter exits : trace -> bool.
     (* Binary representation of the program to be decoded *)
     Parameter lifted_prog : program.
-    Parameter time_of_addr : store -> addr -> N.
+    Parameter time_of_addr : store -> cache -> addr -> N.
 End ProgramInformation.
 
 Module AMD64Timing (prog : ProgramInformation) <: TimingModule IL_amd64.
     Export prog.
+
+    Definition cache := cache.
+    Definition cache_step (_ : store) (_ : cache) (_ : addr) : cache := tt.
 
     Definition time_inf : N := 2^64.
 

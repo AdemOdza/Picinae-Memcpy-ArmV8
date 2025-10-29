@@ -12,9 +12,13 @@ Definition add_signed_offset' (a o : N) : N :=
 
 Definition reg s n := match n with 0 => 0 | _ => s (rv_varid n) end.
 
-Module Type CPUTimingBehavior.
+Inductive cache_type : Type := Data | Instruction.
+
+Module Type RVPedanticCPUTimingBehavior.
     Parameter cache : Type.
+    Parameter clear_cache : cache.
     Parameter cache_step : store -> cache -> addr -> cache.
+    Parameter cached : cache -> addr -> cache_type -> bool.
 
     (* === Instruction Timings === *)
     Parameter
@@ -30,17 +34,17 @@ Module Type CPUTimingBehavior.
             (* not taken *)
                 tfbeq tfbne tfblt tfbge tfbltu tfbgeu
         (* Jump/call *)
-            tjal tjalr : cache -> addr -> N.
+            tjal tjalr : bool -> addr -> N.
     Parameter
         (* Load/store *)
             tlb tlh tlw tlbu tlhu tsb tsh tsw
-            : cache -> N -> N.
+            : bool -> N -> N.
     Parameter
         (* Data fence *)
-            tfence tfencei : cache -> N.
+            tfence tfencei : N.
     Parameter
         (* System *)
-            tecall tebreak tmret : cache -> N. 
+            tecall tebreak tmret : bool -> N. 
     Parameter 
         (* System *) 
             twfi

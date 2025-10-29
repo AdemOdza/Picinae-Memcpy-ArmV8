@@ -66,41 +66,67 @@ Module RISCVTiming (cpu : CPUTimingBehavior) (prog : ProgramInformation) <: Timi
 
         (* Branches *)
         | R5_Beq rs1 rs2 off => bop s time_inf rs1 rs2
-            (fun x y => if x =? y then ttbeq else tfbeq) c 
-            (add_signed_offset a off)
+            (fun x y => if x =? y then ttbeq else tfbeq)
+              (cached c (add_signed_offset a off) Instruction)
+              (add_signed_offset a off)
         | R5_Bne rs1 rs2 off => bop s time_inf rs1 rs2
-            (fun x y => if negb (x =? y) then ttbne else tfbne) c
-            (add_signed_offset a off)
+            (fun x y => if negb (x =? y) then ttbne else tfbne)
+              (cached c (add_signed_offset a off) Instruction)
+              (add_signed_offset a off)
         | R5_Blt rs1 rs2 off => bop s time_inf rs1 rs2
-            (fun x y => if Z.ltb (toZ 32 x) (toZ 32 y) then ttblt else tfblt) c
-            (add_signed_offset a off)
+            (fun x y => if Z.ltb (toZ 32 x) (toZ 32 y) then ttblt else tfblt)
+              (cached c (add_signed_offset a off) Instruction)
+              (add_signed_offset a off)
         | R5_Bge rs1 rs2 off => bop s time_inf rs1 rs2
-            (fun x y => if Z.geb (toZ 32 x) (toZ 32 y) then ttbge else tfbge) c
-            (add_signed_offset a off)
+            (fun x y => if Z.geb (toZ 32 x) (toZ 32 y) then ttbge else tfbge)
+              (cached c (add_signed_offset a off) Instruction)
+              (add_signed_offset a off)
         | R5_Bltu rs1 rs2 off => bop s time_inf rs1 rs2
-            (fun x y => if x <? y then ttbltu else tfbltu) c
-            (add_signed_offset a off)
+            (fun x y => if x <? y then ttbltu else tfbltu)
+              (cached c (add_signed_offset a off) Instruction)
+              (add_signed_offset a off)
         | R5_Bgeu rs1 rs2 off => bop s time_inf rs1 rs2
-            (fun x y => if negb (x <? y) then ttbgeu else tfbgeu) c
-            (add_signed_offset a off)
+            (fun x y => if negb (x <? y) then ttbgeu else tfbgeu)
+              (cached c (add_signed_offset a off) Instruction)
+              (add_signed_offset a off)
 
         (* Jump/call *)
-        | R5_Jal  _ imm       => tjal c (add_signed_offset a imm)
-        | R5_Jalr _ rs1 imm     => tjalr c (resolve_jalr_addr imm rs1)
+        | R5_Jal  _ imm       => 
+            tjal (cached c (add_signed_offset a imm) Instruction) 
+                 (add_signed_offset a imm)
+        | R5_Jalr _ rs1 imm     => 
+            tjalr (cached c (resolve_jalr_addr imm rs1) Instruction)
+                  (resolve_jalr_addr imm rs1)
 
         (* Load/store *)
-        | R5_Lb  _ rs imm      => tlb c (add_signed_offset' rs imm)
-        | R5_Lh  _ rs imm      => tlh c (add_signed_offset' rs imm)
-        | R5_Lw  _ rs imm      => tlw c (add_signed_offset' rs imm)
-        | R5_Lbu _ rs imm      => tlbu c (add_signed_offset' rs imm)
-        | R5_Lhu _ rs imm      => tlhu c (add_signed_offset' rs imm)
-        | R5_Sb  _ rs imm      => tsb c (add_signed_offset rs imm)
-        | R5_Sh  _ rs imm      => tsh c (add_signed_offset rs imm)
-        | R5_Sw  _ rs imm      => tsw c (add_signed_offset rs imm)
+        | R5_Lb  _ rs imm      => tlb
+                (cached c (add_signed_offset' rs imm) Data)
+                (add_signed_offset' rs imm)
+        | R5_Lh  _ rs imm      => tlh
+                (cached c (add_signed_offset' rs imm) Data)
+                (add_signed_offset' rs imm)
+        | R5_Lw  _ rs imm      => tlw
+                (cached c (add_signed_offset' rs imm) Data)
+                (add_signed_offset' rs imm)
+        | R5_Lbu _ rs imm      => tlbu
+                (cached c (add_signed_offset' rs imm) Data)
+                (add_signed_offset' rs imm)
+        | R5_Lhu _ rs imm      => tlhu
+                (cached c (add_signed_offset' rs imm) Data)
+                (add_signed_offset' rs imm)
+        | R5_Sb  _ rs imm      => tsb
+                (cached c (add_signed_offset rs imm) Data)
+                (add_signed_offset rs imm)
+        | R5_Sh  _ rs imm      => tsh
+                (cached c (add_signed_offset rs imm) Data)
+                (add_signed_offset rs imm)
+        | R5_Sw  _ rs imm      => tsw
+                (cached c (add_signed_offset rs imm) Data)
+                (add_signed_offset rs imm)
 
         (* Data fence *)
-        | R5_Fence   _ _    => tfence c
-        | R5_Fence_i        => tfencei c
+        | R5_Fence   _ _    => tfence
+        | R5_Fence_i        => tfencei
 
         (* M extension *)
 

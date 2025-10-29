@@ -31,9 +31,6 @@ Record cache_line : Type := {
     initialized : bool
 }.
 
-Inductive cache_type : Type :=
-    | Data | Instruction.
-
 Record cache : Type := {
     iline : N -> cache_line;
     dline : N -> cache_line;
@@ -168,16 +165,16 @@ Module NEORV32 (cfg : NEORV32Config) (prog : ProgramInformation) <: CPUTimingBeh
     Parameter T_data_latency_raw : N.
     Parameter T_inst_latency_raw : N.
 
-    Definition T_data_latency (c : cache) (a : addr) : N :=
+    Definition T_data_latency (cached : bool) (a : addr) : N :=
         if cfg.DCACHE_EN then (
-            if cached c a Data then 1 else T_inst_latency_raw
+            if cached then 1 else T_inst_latency_raw
         ) else (
             T_inst_latency_raw
         ).
 
-    Definition T_inst_latency (c : cache) (a : addr) : N :=
+    Definition T_inst_latency (cached : bool) (a : addr) : N :=
         if cfg.ICACHE_EN then (
-            if cached c a Instruction then 1 else T_inst_latency_raw
+            if cached then 1 else T_inst_latency_raw
         ) else (
             T_inst_latency_raw
         ).
@@ -221,12 +218,12 @@ Module NEORV32 (cfg : NEORV32Config) (prog : ProgramInformation) <: CPUTimingBeh
     Definition ttbltu c a := 5 + T_inst_latency c a.
     Definition ttbgeu c a := 5 + T_inst_latency c a.
     (* not taken *)
-    Definition tfbeq (_ : cache) (_ : addr) := 3.
-    Definition tfbne (_ : cache) (_ : addr)  := 3.
-    Definition tfblt (_ : cache) (_ : addr)  := 3.
-    Definition tfbge (_ : cache) (_ : addr)  := 3.
-    Definition tfbltu (_ : cache) (_ : addr)  := 3.
-    Definition tfbgeu (_ : cache) (_ : addr)  := 3.
+    Definition tfbeq (_ : bool) (_ : addr) := 3.
+    Definition tfbne (_ : bool) (_ : addr)  := 3.
+    Definition tfblt (_ : bool) (_ : addr)  := 3.
+    Definition tfbge (_ : bool) (_ : addr)  := 3.
+    Definition tfbltu (_ : bool) (_ : addr)  := 3.
+    Definition tfbgeu (_ : bool) (_ : addr)  := 3.
     (* Jump/call *)
     Definition tjal c a := 5 + T_inst_latency c a.
     Definition tjalr c a := 5 + T_inst_latency c a.
@@ -240,8 +237,8 @@ Module NEORV32 (cfg : NEORV32Config) (prog : ProgramInformation) <: CPUTimingBeh
     Definition tsh c a := 4 + T_data_latency c a.
     Definition tsw c a := 4 + T_data_latency c a.
     (* Data fence *)
-    Definition tfence c := 6 + T_data_latency c 0.
-    Definition tfencei c := 6 + T_data_latency c 0.
+    Definition tfence := 6 + T_data_latency false 0.
+    Definition tfencei := 6 + T_data_latency false 0.
     (* System *)
     Definition tecall c := 7 + T_inst_latency c 0.
     Definition tebreak c := 7 + T_inst_latency c 0.

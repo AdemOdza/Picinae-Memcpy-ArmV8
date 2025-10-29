@@ -189,15 +189,24 @@ Proof using.
     - destruct PRE as (Bounds & RBounds & Cycles).
         repeat step.
         1,2,4,5,6: hammer.
-        (* There's some linearity problem here *)
-        (* these goals are true when RAX=0 or RAX=54998 *)
-        (* linear function, so this should be true *)
-        (* but lia can't figure it out *)
-        1-2: admit.
+        etransitivity.
+            apply N.add_le_mono_l. apply Cycles.
+            etransitivity. apply N.add_le_mono_l.
+            apply N.add_le_mono_l.
+            apply N.mul_le_mono_r.
+            assert (s' R_RAX <= 54998). lia.
+            apply H. lia.
+        etransitivity.
+            apply N.add_le_mono_l. apply Cycles.
+            etransitivity. apply N.add_le_mono_l.
+            apply N.add_le_mono_l.
+            apply N.mul_le_mono_r.
+            assert (s' R_RAX <= 54998). lia.
+            apply H. lia.
         -- split. assumption. split. lia.
             rewrite N.mod_small by lia. lia.
         -- split. assumption. split. lia.
             hammer. rewrite N.mod_small by lia. lia.
-Admitted.
+Qed.
 
 End TimingProof.

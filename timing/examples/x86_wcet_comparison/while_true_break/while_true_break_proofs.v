@@ -189,5 +189,25 @@ Proof using.
 Qed.
 
 End TimingProof.
-        
 
+Require Import i5_7300u.
+Module i5_7300u_while_true_break := TimingProof i5_7300u.
+
+Goal forall (n : N) (t : trace),
+    i5_7300u_while_true_break.time_of_while_true_break n t =
+    (i5_7300u_while_true_break.while_true_breakAuto.cycle_count_of_trace t <=
+        (if n <=? 2 then 52 else 56 + (n - 2) * 26)).
+    intros.
+    unfold i5_7300u_while_true_break.time_of_while_true_break. simpl.
+    replace (n * n <=? n + n) with (n <=? 2).
+    unfold i5_7300u.ret. psimpl.
+    reflexivity.
+    destruct n using N.peano_ind. reflexivity.
+    destruct n using N.peano_ind. reflexivity.
+    lia.
+Qed.
+
+Definition val (n : N) := 
+    if n <=? 2 then 52 else 56 + (n - 2) * 26.
+
+Compute (val 1000) / 114234.

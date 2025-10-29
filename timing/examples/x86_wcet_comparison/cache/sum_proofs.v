@@ -129,3 +129,18 @@ Proof using.
 Qed.
 
 End TimingProof.
+
+Require Import i5_7300u.
+Module i5_7300u_sum := TimingProof i5_7300u.
+
+Goal forall (size : N) (t : trace),
+    i5_7300u_sum.time_of_sum size t =
+    (i5_7300u_sum.sumAuto.cycle_count_of_trace t <=
+        (if size =? 0 then 38 else 50 + size * 18)).
+    intros.
+    unfold i5_7300u_sum.time_of_sum. simpl.
+    unfold i5_7300u.ret.
+    psimpl.
+    replace size with 1000. psimpl. Compute 469356 / 18050.
+    reflexivity.
+Qed.

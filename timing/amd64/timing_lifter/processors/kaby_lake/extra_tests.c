@@ -1,27 +1,47 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <x86intrin.h>
+#include <limits.h>
 
 /* Read timestamp counter */
-static inline uint64_t rdtsc(void) {
-    unsigned hi, lo;
-    __asm__ volatile ("rdtsc" : "=a"(lo), "=d"(hi));
-    return ((uint64_t)hi << 32) | lo;
-}
+// static inline uint64_t __rdtsc(void) {
+//     uint32_t hi, lo;
+//     __asm__ volatile ("__rdtsc" : "=a"(lo), "=d"(hi));
+//     return ((uint64_t)hi << 32) | lo;
+// }
 
 /* Prevent compiler from reordering */
 #define BARRIER() __asm__ volatile("" ::: "memory")
 
-/* Number of iterations to average */
+/* Number of iterations per trial */
 #define ITERS 1000000000ULL
+
+/* Number of trials to find worst case */
+#define NUM_TRIALS 1
+
+/* Macro to measure worst-case timing */
+#define MEASURE_WORST_CASE(code_block) ({ \
+    uint64_t worst_time = 0; \
+    for (int trial = 0; trial < NUM_TRIALS; trial++) { \
+        _mm_lfence(); \
+        uint64_t start = __rdtsc(); \
+        for (uint64_t i = 0; i < ITERS; i++) { \
+            code_block; \
+        } \
+        uint64_t end = __rdtsc(); \
+        _mm_lfence(); \
+        uint64_t time = (end - start) / ITERS; \
+        if (time > worst_time) worst_time = time; \
+    } \
+    worst_time; \
+})
 
 
 /* --- Jump / Conditional Branches --- */
 
 /* Test: jz (always taken) */
 uint64_t test_jz_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "xor %%eax, %%eax\n\t"   /* sets ZF=1 */
             "jz 1f\n\t"
@@ -30,17 +50,13 @@ uint64_t test_jz_taken(void) {
             :
             :
             : "eax"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 /* Test: jz (not taken) */
 uint64_t test_jz_not_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $1, %%eax\n\t"      /* sets ZF=0 */
             "jz 1f\n\t"
@@ -49,17 +65,13 @@ uint64_t test_jz_not_taken(void) {
             :
             :
             : "eax"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 /* Test: jnz (taken) */
 uint64_t test_jnz_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $1, %%eax\n\t"
             "jnz 1f\n\t"
@@ -68,17 +80,13 @@ uint64_t test_jnz_taken(void) {
             :
             :
             : "eax"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 /* Test: jnz (not taken) */
 uint64_t test_jnz_not_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "xor %%eax, %%eax\n\t"
             "jnz 1f\n\t"
@@ -87,17 +95,13 @@ uint64_t test_jnz_not_taken(void) {
             :
             :
             : "eax"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 /* Test: jnc (carry clear → taken) */
 uint64_t test_jnc_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "add $0, %%al\n\t"       /* clear CF */
             "jnc 1f\n\t"
@@ -106,41 +110,31 @@ uint64_t test_jnc_taken(void) {
             :
             :
             : "al"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 /* Test: jc (carry set → taken) */
 uint64_t test_jc_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "stc\n\t"                /* set carry flag */
             "jc 1f\n\t"
             "nop\n\t"
             "1:\n\t"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 /* Test: jmp (unconditional) */
 uint64_t test_jmp_addr(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "jmp 1f\n\t"
             "nop\n\t"
             "1:\n\t"
-        );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+        )
+    );
 }
 
 
@@ -149,25 +143,19 @@ uint64_t test_jmp_addr(void) {
 /* Test: add r32, m32 (add from memory) */
 uint64_t test_add_r32_m32(void) {
     static uint32_t mem = 1;
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "add (%0), %%eax\n\t"
             :
             : "r"(&mem)
             : "eax"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 /* Test: shr r16, imm8 */
 uint64_t test_shr_r16_i(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $0xFFFF, %%ax\n\t"
             "shr $1, %%ax\n\t"
@@ -175,66 +163,50 @@ uint64_t test_shr_r16_i(void) {
             :
             : "ax"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 /* --- LEA tests --- */
 
 /* lea r32, [r32 + disp] */
 uint64_t test_lea_r32_addr(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "lea 8(%%ebx), %%ecx\n\t"
             :
             :
             : "ebx", "ecx"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 /* lea r64, [r64 + r64*4 + disp] */
 uint64_t test_lea_r64_addr(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "lea (%%rsi, %%rdi, 4), %%rax\n\t"
             :
             :
             : "rsi", "rdi", "rax"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 
 /* --- NOP test --- */
 uint64_t test_nop(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
-        __asm__ volatile("nop");
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    return MEASURE_WORST_CASE(
+        __asm__ volatile("nop\n\tnop\n\tnop\n\tnop");
+    ) / 4;
 }
 
 #include <stdint.h>
 
-/* Assume rdtsc(), BARRIER(), and ITERS are already defined */
+/* Assume __rdtsc(), BARRIER(), and ITERS are already defined */
 
 /* Test: jge (taken) — eax >= ebx */
 uint64_t test_jge_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $2, %%eax\n\t"
             "mov $1, %%ebx\n\t"
@@ -246,16 +218,12 @@ uint64_t test_jge_taken(void) {
             :
             : "eax", "ebx"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 /* Test: jge (not taken) — eax < ebx */
 uint64_t test_jge_not_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $1, %%eax\n\t"
             "mov $2, %%ebx\n\t"
@@ -267,16 +235,12 @@ uint64_t test_jge_not_taken(void) {
             :
             : "eax", "ebx"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 /* Test: jg (taken) — eax > ebx */
 uint64_t test_jg_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $3, %%eax\n\t"
             "mov $2, %%ebx\n\t"
@@ -288,16 +252,12 @@ uint64_t test_jg_taken(void) {
             :
             : "eax", "ebx"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 /* Test: jg (not taken) — eax <= ebx */
 uint64_t test_jg_not_taken(void) {
-    uint64_t start, end;
-    start = rdtsc();
-    for (uint64_t i = 0; i < ITERS; i++) {
+    return MEASURE_WORST_CASE(
         __asm__ volatile(
             "mov $2, %%eax\n\t"
             "mov $2, %%ebx\n\t"
@@ -309,9 +269,7 @@ uint64_t test_jg_not_taken(void) {
             :
             : "eax", "ebx"
         );
-    }
-    end = rdtsc();
-    return (end - start) / ITERS;
+    );
 }
 
 #define MAX(x, y) (x >= y ? x : y)

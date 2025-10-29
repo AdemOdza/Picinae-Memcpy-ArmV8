@@ -210,3 +210,14 @@ Proof using.
 Qed.
 
 End TimingProof.
+
+Require Import i5_7300u.
+Module i5_7300u_collatz := TimingProof i5_7300u.
+
+Goal forall (size : N) (t : trace),
+    i5_7300u_collatz.time_of_collatz t =
+    (i5_7300u_collatz.collatzAuto.cycle_count_of_trace t <= 3355098).
+    intros.
+    unfold i5_7300u_collatz.time_of_collatz. simpl.
+    reflexivity.
+Qed.

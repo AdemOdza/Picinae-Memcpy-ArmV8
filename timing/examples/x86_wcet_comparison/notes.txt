@@ -18,3 +18,4 @@ Rapitime completely locks up even with loop annotations, seemingly can't handle 
 while_true_break: 5 hours
 cache proof: 30 minutes
 collatz: 3 hours (excluding linearity problem)
+insert_after_pos_in_list: 3 hours

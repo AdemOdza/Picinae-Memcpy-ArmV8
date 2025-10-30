@@ -206,8 +206,3 @@ Goal forall (n : N) (t : trace),
     destruct n using N.peano_ind. reflexivity.
     lia.
 Qed.
-
-Definition val (n : N) := 
-    if n <=? 2 then 52 else 56 + (n - 2) * 26.
-
-Compute (val 1000) / 114234.

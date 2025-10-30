@@ -119,7 +119,7 @@ Lemma not_at_end_next : forall mem head len a dist,
     exists val, list_node_next mem a = Some val.
 Proof.
     intros. unfold list_node_next. destruct a.
-    - pose proof (node_distance_uniq _ _ _ _ _ H H0).
+    - pose proof (node_distance_uniq H H0).
         subst. lia.
     - eexists. reflexivity.
 Qed.
@@ -132,7 +132,7 @@ Lemma not_at_end_next' : forall mem head len a1 dist1 a2 dist2,
     exists val2, list_node_next mem a2 = Some val2.
 Proof.
     intros. unfold list_node_next. destruct a2.
-    - pose proof (node_distance_uniq _ _ _ _ _ H H1).
+    - pose proof (node_distance_uniq H H1).
         subst. lia.
     - eexists. reflexivity.
 Qed.
@@ -163,7 +163,7 @@ Proof.
         pose proof distance_last_node.
         unfold LL.NULL in H4.
         specialize (H4 mem head (N.pos p) dst ltac:(lia) H1 H2).
-        pose proof (node_distance_uniq _ _ _ _ _ H0 H4).
+        pose proof (node_distance_uniq H0 H4).
         now symmetry.
 Qed.
 

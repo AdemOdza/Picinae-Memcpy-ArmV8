@@ -206,6 +206,7 @@ Module Type amd64CPUTimingBehavior.
 		jc_addr
 		add_r32_m32
 		mov_r64_m64
+		cmp_r64_m64
 		shr_r16_i
 		nop
 	:N.

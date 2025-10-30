@@ -19,3 +19,4 @@ while_true_break: 5 hours
 cache proof: 30 minutes
 collatz: 3 hours (excluding linearity problem)
 insert_after_pos_in_list: 3 hours
+insert_in_sorted_list: 1 hour, mostly copied from RISC-V, minor keyword replacement

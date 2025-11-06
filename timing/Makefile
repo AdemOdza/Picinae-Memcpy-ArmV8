@@ -7,7 +7,7 @@
 ##         #     GNU Lesser General Public License Version 2.1          ##
 ##         #     (see LICENSE file for the text of the license)         ##
 ##########################################################################
-## GNUMakefile for Rocq 9.0.0
+## GNUMakefile for Coq 8.20.1
 
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
@@ -276,9 +276,8 @@ COQDOCLIBS?=$(COQLIBS_NOML)
 
 # The version of Coq being run and the version of rocq makefile that
 # generated this makefile
-# NB --print-version is not in the rocq shim
-COQ_VERSION:=$(shell $(ROCQ) c --print-version | cut -d " " -f 1)
-COQMAKEFILE_VERSION:=9.0.0
+COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
+COQMAKEFILE_VERSION:=8.20.1
 
 # COQ_SRC_SUBDIRS is for user-overriding, usually to add
 # `user-contrib/Foo` to the includes, we keep COQCORE_SRC_SUBDIRS for
@@ -308,8 +307,8 @@ else
 endif
 
 ifneq (,$(PROFILING))
-  PROFILE_ARG=-profile $@.prof.json
-  PROFILE_ZIP=gzip -f $@.prof.json
+  PROFILE_ARG=-profile $<.prof.json
+  PROFILE_ZIP=gzip -f $<.prof.json
 else
   PROFILE_ARG=
   PROFILE_ZIP=true

@@ -74,7 +74,7 @@ def parse_operand(op: str) -> X86Var:
             expr = op[len(prefix):].strip()[1:-1]
             return Mem(expr, size=prefix.split()[0])  # "byte"/"word"/"dword"/"qword"
 
-    # heuristic: has parentheses → memory operand
+    # heuristic: has parentheses -> memory operand
     if "(" in op:
         return Mem(op)
 
@@ -124,6 +124,7 @@ def generate_rocq(binary: str, functions: List[str]):
         print(f"Definition {func}_time_of_addr (s : store) (a : addr) : N :=")
         print("  match a with")
         for addr, mnemonic, args in instrs:
+            print(mnemonic, args)
             print(f"  | 0x{addr} => {time_of_instr(mnemonic, args)} (* {mnemonic} {', '.join([str(a) for a in args])} *)")
         print("  | _ => 0")
         print("  end.\n")

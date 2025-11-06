@@ -4,20 +4,20 @@
 #include <limits.h>
 
 typedef struct list_node {
-   uint32_t value;
+   uint64_t value;
    struct list_node* next;
 } list_node;
 
-void insert_after_pos_in_list(list_node* l, list_node* value, uint32_t position);
-list_node* find_in_list(list_node* l, uint32_t key);
+void insert_after_pos_in_list(list_node* l, list_node* value, uint64_t position);
+list_node* find_in_list(list_node* l, uint64_t key);
 void insert_in_sorted_list(list_node* l, list_node* value);
 
 
-void insert_after_pos_in_list(list_node* l, list_node* value, uint32_t position) {
+void insert_after_pos_in_list(list_node* l, list_node* value, uint64_t position) {
    if (l == NULL || value == NULL)
 	return;
 
-   for (uint32_t i = 0; i < position; i++) {
+   for (uint64_t i = 0; i < position; i++) {
        if (l->next == NULL)
 	       break;
        l = l->next;
@@ -28,7 +28,7 @@ void insert_after_pos_in_list(list_node* l, list_node* value, uint32_t position)
 
 #pragma RVS [insert_after_pos_in_list@L1] loop_max_iter (130)
 
-list_node* find_in_list(list_node* l, uint32_t key) {
+list_node* find_in_list(list_node* l, uint64_t key) {
     if (l == NULL)
 	    return NULL;
 

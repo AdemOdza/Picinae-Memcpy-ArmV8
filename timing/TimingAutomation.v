@@ -323,9 +323,38 @@ Ltac do_generalize :=
         clear Heq TSI;
         try (clear t; rename l into t);
         rename H0 into TSI
+    | [t: list (exit * store), 
+        TSI: cycle_count_of_trace ?t <= ?x
+        |- nextinv _ _ _ _ (_ :: ?elem :: ?t)] =>
+        let Heq := fresh "Heq" in
+        let l := fresh "l" in
+        let TSI' := fresh "Cycles" in
+        remember (elem :: t) as l eqn:Heq;
+        match elem with (Addr ?a, ?s) =>
+        let v := fresh "v" in
+        evar (v : N);
+        assert (cycle_count_of_trace l <= v) as TSI' by
+            (rewrite Heq; hammer; psimpl;
+            match goal with
+             | [|- ?ccot + cycle_count_of_trace t <= v] =>
+                try subst v; instantiate (1 := ccot + x)
+             end; lia);
+        subst v;
+        clear Heq TSI;
+        try (clear t; rename l into t);
+        psimpl in TSI';
+        rename TSI' into Cycles
+        end
     | _ => idtac
     end.
-Ltac tstep _step := time _step; do_generalize.
+Ltac tstep _step := time _step; do_generalize;
+    try match goal with
+    | [|- ?x ?= ?y = Gt -> False] =>
+        let H := fresh "H" in
+        let G := fresh "H" in
+        enough (N.le x y) as H; [
+        intro G; now apply H|]
+    end.
 
 (** Folowing are some tactics that help determine why a 
     cycle_count_of_trace t = _ goal is unprovable by scanning the equality for
@@ -377,6 +406,15 @@ Ltac multiset_match lhs rhs :=
 Ltac compare_sums :=
   match goal with
   | [|- ?lhs = ?rhs] =>
+      let L := flatten_plus lhs in
+      let R := flatten_plus rhs in
+      (* idtac L;
+      idtac R; *)
+      multiset_match L R
+      (* tryif (multiset_match L R; idtac)
+      then idtac "all terms matched"
+      else fail "mismatch between" L "and" R *)
+  | [|- ?lhs <= ?rhs] =>
       let L := flatten_plus lhs in
       let R := flatten_plus rhs in
       (* idtac L;

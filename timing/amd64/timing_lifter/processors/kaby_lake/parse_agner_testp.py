@@ -18,9 +18,70 @@ custom = {
     "jnc_addr" : 999,
     "jge_addr" : 999,
     "jg_addr" : 999,
-    "lea_r32_addr" : 999
+    "lea_r32_addr" : 999,
+    "nop": 999
     #lea
 }
+
+
+
+
+replacer_dict={}
+#r64
+replacer_dict.update({'rcx':'r64','rax':"r64",'rbx':"r64",'rdx':"r64",
+                        'rsi':"r64",'rdi':"r64",'rsp':"r64",'rbp':"r64",
+                        'r8':"r64",'r9':"r64",'r10':"r64",'r11':"r64",
+                        'r12':"r64",'r13':"r64",'r14':"r64",'r15': "r64"})
+#r32
+replacer_dict.update({'ecx':'r32','eax':'r32','ebx':'r32','edx':'r32',
+                        'esi':'r32','edi':'r32','esp':'r32','ebp':'r32',
+                        'r8d':'r32','r9d':'r32','r10d':'r32','r11d':'r32',
+                        'r12d':'r32','r13d':'r32','r14d':'r32','r15d':'r32'})
+#r16
+replacer_dict.update({'ax':'r16','bx':'r16','cx':'r16','dx':'r16','si':'r16',
+                        'di':'r16','sp':'r16','bp':'r16','r8w':'r16','r9w':'r16',
+                        'r10w':'r16','r11w':'r16','r12w':'r16','r13w':'r16',
+                        'r14w':'r16','r15w':'r16'})
+
+#r8
+replacer_dict.update({'ah':'r8','al':'r8','bh':'r8','bl':'r8','ch':'r8','cl':'r8',
+                        'dh':'r8','dl':'r8','sil':'r8','dil':'r8','spl':'r8',
+                        'bpl':'r8','r8b':'r8','r9b':'r8','r10b':'r8','r11b':'r8',
+                        'r12b':'r8','r13b':'r8','r14b':'r8','r15b':'r8'})
+
+def parse_wcet_instructions(wcet):
+    parsed_instr ={} 
+    for instr in wcet:
+        og_instr = instr
+        if not('+' in instr) and not('best' in instr) and not ('..' in instr):
+            instr = instr.replace('registersize','r')
+            instr = instr.replace('(worstcase)','')
+            instr = instr.replace('(worst case)','')
+            instr = instr.replace('high','h')
+            instr = instr.replace('imm','i')
+            instr = re.sub(r'regsize (\d+)', r'r\1', instr)
+            instr = re.sub(r'numop (\d+)', r'', instr)
+            instr = re.sub(r'r (\d+)', r'r\1', instr)
+            instr = re.sub(r'\by\b', 'ymm', instr)
+            instr = re.sub(r'\bx\b', 'xmm', instr)
+            instr = instr.replace(',',' ')
+            if re.search(r'\b(jmp|jle|jnz|jz|jnc|jge|jg)_addr\b',instr) \
+               or re.search(r'\b(.*)_wc\b', instr):
+                parsed_instr[instr]=wcet[og_instr]
+            instr_split = instr.replace(', ', ' ').split()
+            instr = '_'.join(instr_split)
+
+            if 'ret' == instr:
+                parsed_instr[instr]=wcet[og_instr]
+            
+
+            if len(instr_split) > 1 :
+                if 'shr_' in instr:
+                    instr='shr'+'_'+instr_split[2]+'_'+instr_split[1]
+                parsed_instr[instr]=wcet[og_instr]
+
+    return parsed_instr
+
 
 def parse_agner_results(dir, mnemonics):
     wcet_dict = defaultdict(int)
@@ -87,70 +148,35 @@ def parse_agner_results(dir, mnemonics):
                                 wcet_dict[ci[0]+'_wc'] = max(latency, wcet_dict[ci[0]+'_wc'])
                     
         wcet_dict.update(custom) 
-        output.write('def time_of_instr(mnemonic: str) -> str :\n\tmatch mnemonic:\n')
-        for instr in sorted(wcet_dict.keys()):
-            output.write(f"\t\tcase \"{instr}\":\n\t\t\treturn \"{wcet_dict[instr]}\"\n")        
-    os.remove("./i5_7300u.py")        
+        output.write("replace_dict = " + str(replacer_dict) + "\n\n")
+        output.write('def time_of_instr(mnemonic: str, args) -> str :\n')
+        output.write('\tfor arg in args:\n')
+        output.write('\t\targ = str(arg)\n')
+        output.write('\t\tif arg.isnumeric():\n')
+        output.write('\t\t\targ = "i"\n')
+        output.write('\t\telse:\n')
+        output.write('\t\t\targ = replace_dict[arg.lower()]\n\n')
+        output.write('\tmatch mnemonic, args:\n')
+        for base_instr in sorted(wcet_dict.keys()):
+            if " " in base_instr:
+                instr, args = base_instr[:base_instr.index(" ")], base_instr[base_instr.index(" ")+1:]
+                args = [a.strip() for a in args.split(",")]
+            else:
+                instr = base_instr
+                args = []
+
+            try:
+                timing_ident = list(parse_wcet_instructions({base_instr: 0}).keys())[0]
+            except IndexError as e:
+                print("Couldn't lift", base_instr, ":", e)
+
+            output.write(f"\t\tcase \"{instr}\", {args}:\n\t\t\treturn \"{timing_ident}\"\n")        
+    # os.remove("./i5_7300u.py")   
     return wcet_dict
-
-def parse_wcet_instructions(wcet):
-    parsed_instr ={} 
-    for instr in wcet:
-        og_instr = instr
-        if not('+' in instr) and not('best' in instr) and not ('..' in instr):
-            instr = instr.replace('registersize','r')
-            instr = instr.replace('(worstcase)','')
-            instr = instr.replace('(worst case)','')
-            instr = instr.replace('high','h')
-            instr = instr.replace('imm','i')
-            instr = re.sub(r'regsize (\d+)', r'r\1', instr)
-            instr = re.sub(r'numop (\d+)', r'', instr)
-            instr = re.sub(r'r (\d+)', r'r\1', instr)
-            instr = re.sub(r'\by\b', 'ymm', instr)
-            instr = re.sub(r'\bx\b', 'xmm', instr)
-            instr = instr.replace(',',' ')
-            if re.search(r'\b(jmp|jle|jnz|jz|jnc|jge|jg)_addr\b',instr) \
-               or re.search(r'\b(.*)_wc\b', instr):
-                parsed_instr[instr]=wcet[og_instr]
-            instr_split = instr.replace(', ', ' ').split()
-            instr = '_'.join(instr_split)
-
-            if 'ret' == instr:parsed_instr[instr]=wcet[og_instr]
-            
-
-            if len(instr_split) > 1 :
-                if 'shr_' in instr:
-                    instr='shr'+'_'+instr_split[2]+'_'+instr_split[1]
-                parsed_instr[instr]=wcet[og_instr]
-
-    return parsed_instr
 
 def time_of_addr(timing_behavior_instructions):
     # Get all .txt files in current directory
     v_files = [Path(f) for f in os.listdir('./timing_x86_lifted') if f.endswith('.v')]
-
-    replacer_dict={}
-    #r64
-    replacer_dict.update({'rcx':'r64','rax':"r64",'rbx':"r64",'rdx':"r64",
-                          'rsi':"r64",'rdi':"r64",'rsp':"r64",'rbp':"r64",
-                          'r8':"r64",'r9':"r64",'r10':"r64",'r11':"r64",
-                          'r12':"r64",'r13':"r64",'r14':"r64",'r15': "r64"})
-    #r32
-    replacer_dict.update({'ecx':'r32','eax':'r32','ebx':'r32','edx':'r32',
-                          'esi':'r32','edi':'r32','esp':'r32','ebp':'r32',
-                          'r8d':'r32','r9d':'r32','r10d':'r32','r11d':'r32',
-                          'r12d':'r32','r13d':'r32','r14d':'r32','r15d':'r32'})
-    #r16
-    replacer_dict.update({'ax':'r16','bx':'r16','cx':'r16','dx':'r16','si':'r16',
-                          'di':'r16','sp':'r16','bp':'r16','r8w':'r16','r9w':'r16',
-                          'r10w':'r16','r11w':'r16','r12w':'r16','r13w':'r16',
-                          'r14w':'r16','r15w':'r16'})
-
-    #r8
-    replacer_dict.update({'ah':'r8','al':'r8','bh':'r8','bl':'r8','ch':'r8','cl':'r8',
-                          'dh':'r8','dl':'r8','sil':'r8','dil':'r8','spl':'r8',
-                          'bpl':'r8','r8b':'r8','r9b':'r8','r10b':'r8','r11b':'r8',
-                          'r12b':'r8','r13b':'r8','r14b':'r8','r15b':'r8'})
 
     with open('time_of_addrs.txt','w') as output:
         for file in v_files:
@@ -222,17 +248,6 @@ def gen_timing_config(picinae_root, timing_behavior_instructions):
             config_file.write(f'\tDefinition '+ cleanse_rocq_ident(instr) +' := '+str(value)+'.\n')
         config_file.write('End i5_7300u.\n')
 
-                if current_instr:
-                    mnum = numeric_line.match(line)
-                    if mnum:
-                        # Core cyc = column 2, Instruct = column 3
-                        core_cyc = int(mnum.group(2))
-                        instructs = int(mnum.group(3))
-                        if instructs > 0:
-                            latency = int(round(core_cyc / instructs))
-                            # Update WCET as max observed
-                            wcet_dict[current_instr] = max(wcet_dict[current_instr], latency)
-    return dict(wcet_dict)
 
 header = """# This file was generated by parse_agner_testp.py
 def time_of_instr(mnemonic: str, args: List[X86Var]) -> str :
@@ -250,9 +265,6 @@ if __name__ == "__main__":
 
     wcet = parse_agner_results(sys.argv[1], mnemonics)
 
-    wcet.update(custom)
-
-    print(header)
     # Print sorted by mnemonic
     #for instr in sorted(wcet.keys()):
         #print(f"        case \"{instr}\":\n            return \"{wcet[instr]}\"")

@@ -193,7 +193,7 @@ Proof using.
                 now psimpl.
             1-4: apply N.eqb_neq in BC; lia.
             (* lower bound *)
-            hammer.
+            hammer. 
             (* upper bound *)
             hammer.
 

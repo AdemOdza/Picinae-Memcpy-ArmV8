@@ -1,10 +1,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-int while_true_break(int n) {
+uint64_t while_true_break(uint64_t n) {
     while (true) {
-        if (n + n >= n * n)
+        if ((uint64_t)n + (uint64_t)n >= (uint64_t)n * (uint64_t)n)
             break;
 
         n--;

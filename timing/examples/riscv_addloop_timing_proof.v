@@ -10,7 +10,7 @@ Require Import ZifyBool.
    can be used for any CPU running the target program. In other words,
    timing proofs are CPU-agnostic and ISA-specific.
 *)
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 (* ProgramInformation modules are used as inputs to the TimingAutomation 
    module, which (you guessed it) provides automation for timing proofs

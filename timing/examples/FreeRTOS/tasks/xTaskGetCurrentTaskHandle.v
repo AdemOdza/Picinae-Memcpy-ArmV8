@@ -2,7 +2,7 @@ Require Import RTOSDemo.
 Require Import RISCVTiming.
 Import RISCVNotations.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_xTaskGetCurrentTaskHandle <: ProgramInformation.
     Definition entry_addr : N := 0x80001984.

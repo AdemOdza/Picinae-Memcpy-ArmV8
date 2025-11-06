@@ -4,7 +4,7 @@ Require Import RTOSDemo.
 Require Import RISCVTiming.
 Import RISCVNotations.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_uxQueueSpacesAvailable <: ProgramInformation.
     Definition entry_addr : N := 0x80003590.

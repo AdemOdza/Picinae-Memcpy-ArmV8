@@ -1,4 +1,4 @@
-Require Import CPUTimingBehavior.
+Require Import RVCPUTimingBehavior.
 Require Import NArith.
 Require Import Picinae_core.
 Open Scope N.
@@ -18,7 +18,7 @@ Module Type NEORV32Config.
 End NEORV32Config.
 
 (* https://stnolting.github.io/neorv32/#_instruction_sets_and_extensions *)
-Module NEORV32 (cfg : NEORV32Config) <: CPUTimingBehavior.
+Module NEORV32 (cfg : NEORV32Config) <: RVCPUTimingBehavior.
     (* Latency Definitions *)
     Definition T_shift_latency (offset : N) : N :=
         if cfg.CPU_FAST_SHIFT_EN then

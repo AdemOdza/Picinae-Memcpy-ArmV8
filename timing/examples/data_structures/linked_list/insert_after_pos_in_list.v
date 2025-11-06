@@ -4,7 +4,7 @@ Import RISCVNotations.
 Require Import TimingAutomation.
 Require Import Arith.
 
-Module TimingProof (cpu: CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_insert_after_pos_in_list <: ProgramInformation.
     Definition entry_addr : N := 0x1e4.

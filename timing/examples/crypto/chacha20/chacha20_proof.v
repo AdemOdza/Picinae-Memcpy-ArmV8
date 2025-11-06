@@ -2,7 +2,7 @@ Require Import ChaCha20.
 Require Import RISCVTiming.
 Import RISCVNotations.
 
-Module TimingProof (cpu : CPUTimingBehavior).
+Module TimingProof (cpu : RVCPUTimingBehavior).
 
 Module Program_ChaCha20 <: ProgramInformation.
     Definition entry_addr : N := 0x224.

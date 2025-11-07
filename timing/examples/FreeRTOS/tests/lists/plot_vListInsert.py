@@ -64,6 +64,7 @@ def main():
     equation = compile_equation(args.equation_file, cpu, ["le_addr"])
 
     data = parse_insert_log(args.log_file)
+    data.sort(key=lambda entry: entry["insert_idx"])
     pct_off = []
     measured_vals = []
     min_expected_vals = []
@@ -97,7 +98,7 @@ def main():
 
     plot_comparison(
         "vListInsert Timing",
-        "Test",
+        "Insertion Index",
         "Cycle Count",
         [('Expected Range (min-max)', 'lightgray',
           min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],

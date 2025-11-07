@@ -121,6 +121,9 @@ static void test_remove(void) {
     for (uint32_t iter = 0; iter < NUM_ITERS; ++iter) {
         uint32_t idx = rand() % NUM_ITERS;
         ListItem_t *item = allItems[idx];
+        // if (rand() % 10 == 0) {
+        //     item->pxContainer->pxIndex = item;
+        // }
         if (item && item->pxContainer != NULL) {
             printf("Iteration %u: removing item[%u] (value=%u) (nxtctr=l := %d)\n",
                    iter, idx, item->xItemValue, (item->pxContainer)->pxIndex == item);

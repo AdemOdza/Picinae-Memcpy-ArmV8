@@ -24,7 +24,7 @@ USER_FLAGS += -ffunction-sections
 USER_FLAGS += -Wl,--gc-sections
 
 # Adjust maximum heap size
-USER_FLAGS += -Wl,--defsym,__neorv32_heap_size=1k
+# USER_FLAGS += -Wl,--defsym,__neorv32_heap_size=1k
 
 # Additional sources
 #APP_SRC += $(wildcard ./*.c)

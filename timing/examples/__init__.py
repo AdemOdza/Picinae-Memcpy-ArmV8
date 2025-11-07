@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from sympy import symbols, sympify
 
-def plot_comparison(title, xlabel, ylabel, ranges, lines, savepath="./comparison_plot.png"):
+def plot_comparison(title, xlabel, ylabel, ranges, lines, savepath="./comparison_plot.png", loc='lower left'):
     plt.figure(figsize=(12, 6))
     for label, color, min, max in ranges:
         plt.fill_between(range(len(min)), min, max, color=color, label=label)
@@ -10,7 +10,7 @@ def plot_comparison(title, xlabel, ylabel, ranges, lines, savepath="./comparison
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
-    plt.legend()
+    plt.legend(loc=loc)
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(savepath)

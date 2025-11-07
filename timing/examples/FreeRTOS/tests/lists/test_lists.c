@@ -122,8 +122,8 @@ static void test_remove(void) {
         uint32_t idx = rand() % NUM_ITERS;
         ListItem_t *item = allItems[idx];
         if (item && item->pxContainer != NULL) {
-            printf("Iteration %u: removing item[%u] (value=%u)\n",
-                   iter, idx, item->xItemValue);
+            printf("Iteration %u: removing item[%u] (value=%u) (nxtctr=l := %d)\n",
+                   iter, idx, item->xItemValue, (item->pxContainer)->pxIndex == item);
             START_TIMER;
             uxListRemove(item);
             PRINT_TIMER;

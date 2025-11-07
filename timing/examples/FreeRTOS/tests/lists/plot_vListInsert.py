@@ -97,7 +97,7 @@ def main():
 
     plot_comparison(
         "vListInsert Timing",
-        "Insertion Index",
+        "Test",
         "Cycle Count",
         [('Expected Range (min-max)', 'lightgray',
           min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],

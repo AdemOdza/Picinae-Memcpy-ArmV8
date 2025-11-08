@@ -115,7 +115,8 @@ def main():
         ],
         range_xs=[notfound_xs, 
                 #   found_idxs
-                ]
+                ],
+        savepath="./find_naive_plot.png"
     )
     
 

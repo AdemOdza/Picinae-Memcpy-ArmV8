@@ -76,7 +76,7 @@ def main():
 
     cpu = NEORV32Config(args.cpu_config_file)
     find_equation = compile_equation(args.find_equation_file, cpu, ["length", "found_idx"])
-    insert_equation = compile_equation(args.insert_equation_file, cpu, ["l", "value", "position", "len"])
+    insert_equation = compile_equation(args.insert_equation_file, cpu, ["l", "value", "position", "length"])
 
     for func_name, (equation, _) in [
         ("find_in_list", (find_equation, ["length", "found_idx"])),
@@ -104,8 +104,8 @@ def main():
             elif func_name == "insert_after_pos_in_list":
                 length, pos, val = metadata[i]
                 # Only "position" and "len" matter in the equation; others can be dummy
-                args_for_equation = [0, 0, pos, length]
-                args_for_equation2 = [0, 0, pos, length]
+                args_for_equation = [1, 1, pos, length]
+                args_for_equation2 = [1, 1, pos, length]
 
             else:
                 raise ValueError(f"Unsupported function: {func_name}")
@@ -118,12 +118,12 @@ def main():
             if func_name == "find_in_list":
                 if i == 0:
                     print(f"{'In Bounds':9} | {'Length':7} | {'Arguments':25} | {'Measured':8} | {'Min - Max':15} | {'Diffs':15} | Percent Off")
-                if found_idx == -1:
+                if found_idx == -1 and 5 < length:
                     notfound_points.append((length, measured))
                     notfound_min.append(min_expected)
                     notfound_max.append(max_expected)
-                else:
-                    found_points.append((length, measured, min_expected, max_expected))
+                elif 5 < found_idx:
+                    found_points.append((found_idx, measured, min_expected, max_expected))
             else:
                 found_points.append((length, pos, measured, min_expected, max_expected))
 
@@ -151,6 +151,10 @@ def main():
             found_max = [m for _, _, _, m in found_points]
             found_plot_points = list(zip(found_xs, found_measured))
 
+            notfound_xs.insert(0, 1)
+            notfound_min.insert(0, find_equation([1, 0], "min"))
+            notfound_max.insert(0, find_equation([1, 0], "max"))
+
             plot_comparison(
                 f"{func_name} timing",
                 "Found Index",
@@ -167,7 +171,8 @@ def main():
                 savepath="./find_in_list_plot.png"
             )
         elif func_name == "insert_after_pos_in_list":
-            found_xs = [x for x, _, _, _, _ in found_points]
+            found_points.sort(key=lambda t: t[1])
+            found_xs = [x for _, x, _, _, _ in found_points]
             found_measured = [m for _, _, m, _, _ in found_points]
             found_min = [m for _, _, _, m, _ in found_points]
             found_max = [m for _, _, _, _, m in found_points]

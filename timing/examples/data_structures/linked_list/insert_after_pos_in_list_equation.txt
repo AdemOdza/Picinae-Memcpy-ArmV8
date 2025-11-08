@@ -1,5 +1,5 @@
 Piecewise(
-    (10 + T_inst_latency, T_inst_latency, Eq(l, 0)),
+    (10 + T_inst_latency + T_inst_latency, Eq(l, 0)),
     (5 + Piecewise(
         (8 + T_inst_latency, Eq(value, 0)),
         (Piecewise(

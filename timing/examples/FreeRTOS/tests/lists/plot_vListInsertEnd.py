@@ -79,9 +79,9 @@ def main():
     print(f"Avg max percent off: {100.0 * sum([i[1] for i in pct_off]) / len(pct_off):.4}%")
     print(f"Variance percent off: {variance(pct_off)}%")
 
-    plot_comparison("vListInsertEnd", "Iteration", "Cycle Count",
-                    [('Expected Range (min-max)', 'lightgray', min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],
-                    [('Measured', measured_vals[:PLOT_LEN])], savepath="./plots/vListInsertEnd.png")
+    # plot_comparison("vListInsertEnd", "Iteration", "Cycle Count",
+    #                 [('Expected Range (min-max)', 'lightgray', min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],
+    #                 [('Measured', measured_vals[:PLOT_LEN])], savepath="./plots/vListInsertEnd.png")
 
 
 if __name__ == "__main__":

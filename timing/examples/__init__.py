@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 from sympy import symbols, sympify
 
+plt.rcParams.update({'font.size': 20})
+
 def plot_comparison(title, xlabel, ylabel, ranges, lines, savepath="./comparison_plot.png", loc='upper left', range_xs = None):
     plt.figure(figsize=(12, 6))
     range_xs = [range(len(x)) for (_, _, x, _) in ranges] if range_xs is None else range_xs

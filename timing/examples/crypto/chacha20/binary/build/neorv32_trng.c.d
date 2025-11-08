@@ -21,7 +21,6 @@ build/neorv32_trng.c.o: \
  /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_slink.h \
  /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_spi.h \
  /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_sysinfo.h \
- /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_tracer.h \
  /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_trng.h \
  /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_twd.h \
  /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_twi.h \
@@ -49,7 +48,6 @@ build/neorv32_trng.c.o: \
 /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_slink.h:
 /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_spi.h:
 /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_sysinfo.h:
-/home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_tracer.h:
 /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_trng.h:
 /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_twd.h:
 /home/charles/Desktop/projects/rocq/neorv32/sw/lib/include/neorv32_twi.h:

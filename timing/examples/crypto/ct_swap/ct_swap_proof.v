@@ -157,3 +157,20 @@ Proof using.
 Qed.
 
 End TimingProof.
+
+
+Require Import NEORV32.
+Module NRV32 := NEORV32 NEORV32BaseConfig.
+Module NEORV32TimingProof := TimingProof NRV32.
+Import NEORV32TimingProof NRV32.
+
+Goal forall t len,
+    time_of_ct_swap len t = 
+    (ct_swapAuto.cycle_count_of_trace t = 
+      17 + len * (42 + 5 * T_data_latency + 2 * T_inst_latency) + T_inst_latency).
+Proof.
+    intros. unfold time_of_ct_swap. f_equal.
+    unfold tslli, tsub, tadd, ttbne, tlw, taddi, txor, tand, tsw, tlw,
+        tjal, tjalr, tfbne, T_shift_latency, NEORV32BaseConfig.CPU_FAST_SHIFT_EN.
+    lia.
+Qed.

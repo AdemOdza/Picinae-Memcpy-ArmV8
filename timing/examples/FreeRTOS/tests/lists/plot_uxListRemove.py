@@ -11,7 +11,6 @@ from examples import *
 PLOT_LEN = 100
 CALLING_CONVENTION_CYCLES = 11
 
-
 def parse_cycle_counts(log_path):
     with open(log_path, 'r') as f:
         lines = f.readlines()
@@ -50,7 +49,7 @@ def main():
     equation = compile_equation(args.equation_file, cpu, ["length"])
 
     pct_off = []
-    measured_vals = [m - CALLING_CONVENTION_CYCLES for m in cycle_counts]
+    # measured_vals = [m - CALLING_CONVENTION_CYCLES for m in cycle_counts]
     min_expected_vals = []
     max_expected_vals = []
 
@@ -79,9 +78,9 @@ def main():
     print(f"Avg max percent off: {100.0 * sum([i[1] for i in pct_off]) / len(pct_off):.4}%")
     print(f"Variance percent off: {variance(pct_off)}%")
 
-    plot_comparison("uxListRemove", "Iteration", "Cycle Count",
-                    [('Expected Range (min-max)', 'lightgray', min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],
-                    [('Measured', measured_vals[:PLOT_LEN])], savepath="./plots/uxListRemove.png")
+    # plot_comparison("uxListRemove", "Iteration", "Cycle Count",
+    #                 [('Expected Range (min-max)', 'lightgray', min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],
+    #                 [('Measured', measured_vals[:PLOT_LEN])], savepath="./plots/uxListRemove.png")
 
 
 if __name__ == "__main__":

@@ -74,16 +74,17 @@ def main():
           f"{'Measured':>8} | {'Expected Bounds':>15} | {'Diffs':>9} | {'Diffs/Measured':>14}")
     print("-" * 95)
 
+    min_expected_vals = [equation([i], "min") for i in range(0, PLOT_LEN)]
+    max_expected_vals = [equation([i], "max") for i in range(0, PLOT_LEN)]
+
     for i, entry in enumerate(data):
         measured = entry["cycle"] - CALLING_CONVENTION_CYCLES
-        measured_vals.append(measured)
         insert_idx = entry["insert_idx"]
-        length = i + 1
+        if insert_idx < PLOT_LEN:
+            measured_vals.append((insert_idx, measured))
 
         min_expected = equation([insert_idx], "min")
         max_expected = equation([insert_idx], "max")
-        min_expected_vals.append(min_expected)
-        max_expected_vals.append(max_expected)
 
         min_diff = abs(measured - min_expected)
         max_diff = abs(measured - max_expected)
@@ -102,7 +103,7 @@ def main():
         "Cycle Count",
         [('Expected Range (min-max)', 'lightgray',
           min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],
-        [('Measured', measured_vals[:PLOT_LEN])], savepath="./plots/vListInsert.png"
+        [('Measured', measured_vals)], savepath="./plots/vListInsert.png"
     )
 
 

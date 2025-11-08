@@ -57,6 +57,9 @@ def main():
     print(f"{'In Bounds':>9} | {'Measured':>8} | {'Expected Bounds':>15} | {'Diffs':>9} | {'Diffs/Measured':>14}")
     print("-" * 76)
 
+    min_expected_vals = [equation([i], "min") for i in range(0, 100)]
+    max_expected_vals = [equation([i], "max") for i in range(0, 100)]
+
     for i, measured in enumerate(cycle_counts):
         measured -= CALLING_CONVENTION_CYCLES
         len_value = i + 1
@@ -64,8 +67,8 @@ def main():
         # Evaluate piecewise equation
         min_expected = equation([len_value], "min")
         max_expected = equation([len_value], "max")
-        min_expected_vals.append(min_expected)
-        max_expected_vals.append(max_expected)
+        # min_expected_vals.append(min_expected)
+        # max_expected_vals.append(max_expected)
 
         min_diff = abs(measured - min_expected)
         max_diff = abs(measured - max_expected)

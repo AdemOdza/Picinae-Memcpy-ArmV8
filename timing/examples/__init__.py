@@ -1,12 +1,14 @@
 from matplotlib import pyplot as plt
 from sympy import symbols, sympify
 
-def plot_comparison(title, xlabel, ylabel, ranges, lines, savepath="./comparison_plot.png", loc='lower left'):
+def plot_comparison(title, xlabel, ylabel, ranges, lines, savepath="./comparison_plot.png", loc='upper left', range_xs = None):
     plt.figure(figsize=(12, 6))
-    for label, color, min, max in ranges:
-        plt.fill_between(range(len(min)), min, max, color=color, label=label)
-    for label, y in lines:
-        plt.plot(range(len(y)), y, label=label)
+    range_xs = [range(len(x)) for (_, _, x, _) in ranges] if range_xs is None else range_xs
+    for i, (label, color, min, max) in enumerate(ranges):
+        plt.fill_between(range_xs[i], min, max, color=color, label=label)
+    for label, points in lines:
+        x, y = zip(*points)
+        plt.scatter(x, y, label=label)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)

@@ -153,6 +153,18 @@ static void test_reinitialise(void) {
     }
 }
 
+static void test_initialise_item(void) {
+    puts("\n=== test: vListInitialiseItem ===\n");
+    ListItem_t testItem;
+
+    for (uint32_t iter = 0; iter < NUM_ITERS; ++iter) {
+        printf("Iteration %u: initialising item\n", iter);
+        START_TIMER;
+        vListInitialiseItem(&testItem);
+        PRINT_TIMER;
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Main entry point
 // -----------------------------------------------------------------------------
@@ -170,6 +182,8 @@ int main(void) {
     test_remove();
     heap_offset = 0;
     test_reinitialise();
+    heap_offset = 0;
+    test_initialise_item();
 
     puts("\nTiming tests complete.\n");
     return 0;

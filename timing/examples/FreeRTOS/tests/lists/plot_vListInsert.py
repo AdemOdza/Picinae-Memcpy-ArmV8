@@ -101,7 +101,7 @@ def main():
         "vListInsert Timing",
         "Insertion Index",
         "Cycle Count",
-        [('Expected Range (min-max)', 'lightgray',
+        [('Expected', 'lightgray',
           min_expected_vals[:PLOT_LEN], max_expected_vals[:PLOT_LEN])],
         [('Measured', measured_vals)], savepath="./plots/vListInsert.png"
     )

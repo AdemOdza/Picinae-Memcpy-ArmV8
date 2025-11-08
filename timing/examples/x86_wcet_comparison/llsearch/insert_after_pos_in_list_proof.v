@@ -259,8 +259,8 @@ Goal forall (base_mem : memory) (l value : addr) (pos : N) (len : nat) (t : trac
             then 26
             else
             if pos =? 0
-            then 1052
-            else 1043 + (1 + N.max pos (N.of_nat len)) * 1023)).
+            then 59
+            else 50 + (1 + N.max pos (N.of_nat len)) * 30)).
     intros.
     unfold i5_7300u_insert_in_sorted_list.time_of_insert_in_sorted_list. simpl.
     unfold i5_7300u.ret, i5_7300u.mov_m64_r64.

@@ -77,7 +77,7 @@ def main():
     print(f"Variance percent off: {variance(pct_off)}%")
 
     plot_comparison(
-        "ct_swap",
+        "passchk_patched",
         "Array Length",
         "Cycle Count",
         [

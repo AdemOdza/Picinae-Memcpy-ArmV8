@@ -183,7 +183,7 @@ def main():
                 "Insertion Position",
                 "Cycle Count",
                 [
-                    ('Expected Range', 'skyblue', found_min, found_max)
+                    ('Expected', 'lightgray', found_min, found_max)
                 ],
                 [
                     ('Measured', found_plot_points)

@@ -272,6 +272,33 @@ uint64_t test_jg_not_taken(void) {
     );
 }
 
+/* Test: mov r64, m64 (load from memory) */
+uint64_t test_mov_r64_m64(void) {
+    static uint64_t mem = 0x123456789ABCDEF0ULL;
+    return MEASURE_WORST_CASE(
+        __asm__ volatile(
+            "mov (%0), %%rax\n\t"
+            :
+            : "r"(&mem)
+            : "rax"
+        );
+    );
+}
+
+/* Test: cmp r64, m64 (compare register with memory) */
+uint64_t test_cmp_r64_m64(void) {
+    static uint64_t mem = 0x1111111111111111ULL;
+    return MEASURE_WORST_CASE(
+        __asm__ volatile(
+            "mov $0x1111111111111111, %%rax\n\t"
+            "cmp (%0), %%rax\n\t"
+            :
+            : "r"(&mem)
+            : "rax"
+        );
+    );
+}
+
 #define MAX(x, y) (x >= y ? x : y)
 
 /* --- MAIN --- */
@@ -288,5 +315,7 @@ int main(void) {
     printf("lea r32, addr:         %lu cycles\n", test_lea_r32_addr());
     printf("lea r64, addr:         %lu cycles\n", test_lea_r64_addr());
     printf("nop:                   %lu cycles\n", test_nop());
+    printf("mov r64, m64:          %lu cycles\n", test_mov_r64_m64());
+    printf("cmp r64, m64:          %lu cycles\n", test_cmp_r64_m64());
     return 0;
 }

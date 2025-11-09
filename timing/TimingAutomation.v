@@ -144,6 +144,9 @@ Fixpoint create_noverlaps (l : list (N * addr)) : Prop :=
         ) t True /\ create_noverlaps t
     end.
 
+Fixpoint create_noverlaps' (l : list (list (N * addr))) : Prop :=
+
+
 (* Split a create_noverlaps hypothesis into all of its ~ overlap _ _ _ _ 
    constituents *)
 Ltac unfold_create_noverlaps :=
@@ -175,7 +178,8 @@ Ltac solve_single_noverlap :=
     repeat rewrite overlap_mod_l;
     repeat rewrite overlap_mod_r;
 
-    auto using noverlap_symmetry.
+    try (solve [auto using noverlap_symmetry] ||
+        solve [eapply noverlap_shrink; [| eassumption]; psimpl; lia]).
 
 Ltac _count_conj expr n :=
     match expr with
@@ -193,7 +197,7 @@ Ltac count_conj :=
     end.
 
 Ltac solve_noverlaps n total :=
-    idtac "solved " n " / " total " noverlaps";
+    idtac "solved" n "/" total "noverlaps";
     match goal with 
     | [|- _ /\ _] =>
         split; [

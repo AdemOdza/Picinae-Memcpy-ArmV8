@@ -14,7 +14,7 @@ Definition reg s n := match n with 0 => 0 | _ => s (rv_varid n) end.
 
 Inductive cache_type : Type := Data | Instruction.
 
-Module Type RVPedanticCPUTimingBehavior.
+Module Type CPUTimingBehavior.
     Parameter cache : Type.
     Parameter clear_cache : cache.
     Parameter cache_step : store -> cache -> addr -> cache.

@@ -1,8 +1,7 @@
 Require Import cached_sum.
 Require Import RISCVTiming.
 Import RISCVNotations.
-
-Module TimingProof (cpu : CPUTimingBehavior).
+Require Import NEORV32.
 
 Module Program_cached_sum <: ProgramInformation.
     Definition entry_addr : N := 0x210.
@@ -15,6 +14,8 @@ Module Program_cached_sum <: ProgramInformation.
 
     Definition binary := cached_sum.
 End Program_cached_sum.
+
+Module cpu := NEORV32Base Program_cached_sum.
 
 Module RISCVTiming := RISCVTiming cpu Program_cached_sum.
 Module cached_sumAuto := RISCVTimingAutomation RISCVTiming.
@@ -120,7 +121,45 @@ Proof using.
     destruct_inv 32 PRE.
 
     destruct PRE as (A0 & A1 & SP & Cycles).
-    - do 6 step. step.
+    - do 4 step. r5_step.
+
+        Ltac generalize_timing_trace Heq TSI l a old_cache s t ::=
+            idtac "generalize";
+    let x := fresh "x" in
+    let c := fresh "c" in
+    remember ((Addr a, _) :: t) as l eqn:Heq;
+    (* I promise this is necessary *)
+    (* if instead eassert is used, it likes to try and *)
+    (* fill in the hole on its own. *)
+    evar (x : N);
+    evar (c : cache);
+    idtac "solving";
+    assert (cycle_count_of_trace l old_cache = (x, c)) as TSI by (
+        rewrite Heq, cycle_count_of_trace_cons; find_rewrites;
+        cbv delta [cycle_count_of_trace];
+        unfold_time_of_addr;
+        psimpl; now subst x c
+    ); subst x c.
+
+    Ltac do_generalize ::=
+    lazymatch goal with
+    | [t: list (exit * store), 
+        TSI: cycle_count_of_trace ?t ?old = (?x, ?c)
+        |- nextinv _ _ _ _ (_ :: (Addr ?a, ?s) :: ?t)] =>
+        idtac "hi";
+        let Heq := fresh "Heq" in
+        let H0 := fresh "TSI" in
+        let l := fresh "tail" in
+        generalize_timing_trace Heq H0 l a old s t;
+        clear Heq TSI;
+        try (clear t; rename l into t);
+        rename H0 into TSI
+    | _ => idtac
+    end. do_generalize. cbv zeta in Cycles.
+    r5_step. do_generalize.
+        rewrite Heq, cycle_count_of_trace_cons.
+        simpl. now subst x c.
+        
 Qed.
 
 End TimingProof.

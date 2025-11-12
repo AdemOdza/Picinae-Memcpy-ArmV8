@@ -325,29 +325,29 @@ Ltac fold_big_subs :=
         simpl (2^BW - X) in H
     end.
 
-Ltac generalize_timing_trace Heq TSI l a s t :=
+Ltac generalize_timing_trace Heq TSI l a old_cache s t :=
     let x := fresh "x" in
+    let c := fresh "c" in
     remember ((Addr a, _) :: t) as l eqn:Heq;
     (* I promise this is necessary *)
     (* if instead eassert is used, it likes to try and *)
     (* fill in the hole on its own. *)
     evar (x : N);
-    assert (cycle_count_of_trace l = x) as TSI by
-        (rewrite Heq; hammer; psimpl;
-        match goal with
-        | [|- ?v = x] => try subst x; instantiate (1 := v)
-        end; reflexivity);
-    subst x.
+    evar (c : cache);
+    assert (cycle_count_of_trace l old_cache = (x, c)) as TSI by (
+        rewrite Heq, cycle_count_of_trace_cons; find_rewrites;
+        simpl; now subst x c
+    ); subst x.
 
 Ltac do_generalize :=
     lazymatch goal with
     | [t: list (exit * store), 
-        TSI: cycle_count_of_trace ?t = ?x
+        TSI: cycle_count_of_trace ?t ?old = (?x, ?c)
         |- nextinv _ _ _ _ (_ :: (Addr ?a, ?s) :: ?t)] =>
         let Heq := fresh "Heq" in
         let H0 := fresh "TSI" in
         let l := fresh "tail" in
-        generalize_timing_trace Heq H0 l a s t;
+        generalize_timing_trace Heq H0 l a old s t;
         clear Heq TSI;
         try (clear t; rename l into t);
         rename H0 into TSI

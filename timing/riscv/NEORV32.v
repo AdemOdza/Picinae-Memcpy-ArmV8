@@ -301,8 +301,8 @@ Module NEORV32BaseConfig <: NEORV32Config.
     Definition CLOCK_FREQUENCY : N := 50000000.
     Definition CPU_FAST_SHIFT_EN : bool := false.
     Definition CPU_FAST_MUL_EN : bool := false.
-    Definition ICACHE_EN : bool := false.
-    Definition DCACHE_EN : bool := false.
+    Definition ICACHE_EN : bool := true.
+    Definition DCACHE_EN : bool := true.
     Definition ICACHE_NUM_BLOCKS : N := 4.
     Definition DCACHE_NUM_BLOCKS : N := 4.
     Definition CACHE_BLOCK_SIZE : N := 64.

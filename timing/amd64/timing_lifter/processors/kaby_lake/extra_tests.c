@@ -10,6 +10,16 @@
 //     return ((uint64_t)hi << 32) | lo;
 // }
 
+static inline uint64_t rdtsc_serialized(void) {
+    unsigned hi, lo;
+    asm volatile("cpuid\n\t"
+                 "rdtsc\n\t"
+                 : "=a"(lo), "=d"(hi)
+                 :
+                 : "%rbx", "%rcx");
+    return ((uint64_t)hi << 32) | lo;
+}
+
 /* Prevent compiler from reordering */
 #define BARRIER() __asm__ volatile("" ::: "memory")
 
@@ -24,11 +34,11 @@
     uint64_t worst_time = 0; \
     for (int trial = 0; trial < NUM_TRIALS; trial++) { \
         _mm_lfence(); \
-        uint64_t start = __rdtsc(); \
+        uint64_t start = rdtsc_serialized(); \
         for (uint64_t i = 0; i < ITERS; i++) { \
             code_block; \
         } \
-        uint64_t end = __rdtsc(); \
+        uint64_t end = rdtsc_serialized(); \
         _mm_lfence(); \
         uint64_t time = (end - start) / ITERS; \
         if (time > worst_time) worst_time = time; \

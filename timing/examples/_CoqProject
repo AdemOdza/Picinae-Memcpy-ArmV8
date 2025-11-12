@@ -8,9 +8,9 @@ data_structures/array/find_in_array_opt/find_in_array_opt_proof.v
 
 # The following are broken due to updates in automation
 # =============
-# data_structures/array/bubble_sort/bubble_sort.v
-# data_structures/array/bubble_sort/loose_bound/bubble_sort_theta_n2_proof.v
-# data_structures/array/bubble_sort/tight_bound/bubble_sort_theta_n2_proof.v
+data_structures/array/bubble_sort/bubble_sort.v
+data_structures/array/bubble_sort/loose_bound/bubble_sort_theta_n2_proof.v
+data_structures/array/bubble_sort/tight_bound/bubble_sort_theta_n2_proof.v
 # data_structures/array/bubble_sort/exact_bound_oracle/bubble_sort_theta_n2_proof_exact.v
 # data_structures/array/bubble_sort/exact_bound_sum/bubble_sort_theta_n2_proof_exact.v
 

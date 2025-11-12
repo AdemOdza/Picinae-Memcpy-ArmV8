@@ -144,9 +144,6 @@ Fixpoint create_noverlaps (l : list (N * addr)) : Prop :=
         ) t True /\ create_noverlaps t
     end.
 
-Fixpoint create_noverlaps' (l : list (list (N * addr))) : Prop :=
-
-
 (* Split a create_noverlaps hypothesis into all of its ~ overlap _ _ _ _ 
    constituents *)
 Ltac unfold_create_noverlaps :=
@@ -327,6 +324,39 @@ Ltac do_generalize :=
         clear Heq TSI;
         try (clear t; rename l into t);
         rename H0 into TSI
+    | [t: list (exit * store), 
+        TSI1: cycle_count_of_trace ?t <= ?x,
+        TSI2: ?y <= cycle_count_of_trace ?t
+        |- nextinv _ _ _ _ (_ :: ?elem :: ?t)] =>
+        let Heq := fresh "Heq" in
+        let l := fresh "l" in
+        let TSI1' := fresh "CyclesLow" in
+        let TSI2' := fresh "CyclesHigh" in
+        remember (elem :: t) as l eqn:Heq;
+        match elem with (Addr ?a, ?s) =>
+        let v := fresh "v" in
+        evar (v : N);
+        assert (cycle_count_of_trace l <= v) as TSI1' by
+            (rewrite Heq; hammer; psimpl;
+            match goal with
+             | [|- ?ccot + cycle_count_of_trace t <= v] =>
+                try subst v; instantiate (1 := ccot + x)
+             end; lia);
+        subst v;
+        evar (v : N);
+        assert (v <= cycle_count_of_trace l) as TSI2' by
+            (rewrite Heq; hammer; psimpl;
+            match goal with
+             | [|- v <= ?ccot + cycle_count_of_trace t] =>
+                try subst v; instantiate (1 := ccot + y)
+             end; lia);
+        subst v;
+        clear Heq TSI1 TSI2;
+        try (clear t; rename l into t);
+        psimpl in TSI1'; psimpl in TSI2';
+        rename TSI1' into CyclesLow;
+        rename TSI2' into CyclesHigh
+        end
     | [t: list (exit * store), 
         TSI: cycle_count_of_trace ?t <= ?x
         |- nextinv _ _ _ _ (_ :: ?elem :: ?t)] =>

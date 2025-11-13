@@ -70,7 +70,7 @@ Definition linked_list_find_in_list_amd64 : program := fun _ a => match a with
 | 0x1B => Some (2,
 	Move (V_TEMP 0x12880) (UnOp OP_NOT (Var R_ZF)) $;
 	If (Cast CAST_LOW 1 (Var (V_TEMP 0x12880))) (
-		Jmp (Word 0xfffffffffffffff8 64)
+		Jmp (Word 0x10 64)
 	) (* else *) (
 		Nop
 	)

@@ -996,6 +996,6 @@ Module i5_7300u <: amd64CPUTimingBehavior.
 	Definition jc_addr := 10.
 	Definition add_r32_m32 := 6.
 	Definition shr_r16_i := 5.
-	Definition mov_r64_m64 := 999.
-	Definition cmp_r64_m64 := 999.
+	Definition mov_r64_m64 := 42.
+	Definition cmp_r64_m64 := 36.
 End i5_7300u.

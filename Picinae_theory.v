@@ -6491,7 +6491,9 @@ Ltac prove_noassign :=
 
 (* Linked list nodes are modeled as structs comprised of a datum and a next pointer.
    The datum is first, so a node at address a will have the datum located at a, and
-   the pointer at address a+dw, for dw being the byte-width of the datum.
+   the pointer at address a+dw+dwb, for dw being the byte-width of the datum and dwb
+   being a buffer between the datum and the next pointer, sometimes used by architectures
+   for lists with smaller data than pointers.
 
    To instantiate the LinkedLists theory module create a LinkedListParams module
    using the `<:` module subtyping scope.  This renders the module transparent
@@ -6501,22 +6503,23 @@ Ltac prove_noassign :=
       Module p <: LinkedListParams.
         Definition w := 32.
         Definition e := LittleE.
-        Definition dw := 4.
-        Definition pw := 4.
+        Definition dw  := 4.
+        Definition dwb := 4.
+        Definition pw  := 8.
         Global Transparent w e dw pw.
       End p.
  *)
 Module Type LinkedListParams.
   Parameter w : bitwidth.
   Parameter e : endianness.
-  Parameter dw pw : bitwidth.
+  Parameter dw dwb pw : bitwidth.
   Global Transparent w e dw pw.
 End LinkedListParams.
 
 (* TODO: change node names to the a-b-c-m-m'-z theme. *)
 Module LinkedLists (P:LinkedListParams).
 Import P.
-Global Transparent w e dw pw.
+Global Transparent w e dw dwb pw.
 Section ll_section.
   (*
   Context {w : bitwidth}.
@@ -6528,7 +6531,7 @@ Section ll_section.
 Declare Scope ll_scope.
 Open Scope ll_scope.
 Notation "m Ⓥ[ a  ]" := (getmem w e dw m a) (at level 30) : ll_scope. (* read dword from memory *)
-Notation "m Ⓟ[ a  ]" := (getmem w e pw m (dw+a)) (at level 30) : ll_scope. (* read dword from memory *)
+Notation "m Ⓟ[ a  ]" := (getmem w e pw m (dw+dwb+a)) (at level 30) : ll_scope. (* read dword from memory *)
 
 Definition NULL : N := 0.
 Definition list_node_value (mem : N) (node : addr) : option N :=
@@ -6992,7 +6995,7 @@ Qed.
 Theorem noverlap_llsame_llbounds:
   forall mem wraddr wrlen v head min max
     (LLB: LLBounds mem head min max)
-    (NOV: ~overlap w wraddr wrlen min (max+dw+pw-min)),
+    (NOV: ~overlap w wraddr wrlen min (max+dw+dwb+pw-min)),
   LLSame mem (setmem w e wrlen mem wraddr v) head.
 Proof.
   intros. revert head LLB. cofix IH; intros.
@@ -7003,7 +7006,7 @@ Proof.
   3: apply IH; inversion LLB; subst; now align_next.
     all:cycle 1; inversion LLB; remember (N.pos p) as a.
     apply noverlap_symmetry.
-    pose (dw + a - min) as i. replace (dw+a) with (min+i) by lia.
+    pose (dw + dwb + a - min) as i. replace (dw+dwb+a) with (min+i) by lia.
     eapply noverlap_index_r. exact NOV. lia.
 
     apply noverlap_symmetry.
@@ -7033,7 +7036,7 @@ Theorem noverlap_llsame_llbounds_trans:
   forall mem mem' wraddr wrlen v head min max
     (LLB: LLBounds mem head min max)
     (LLS: LLSame mem mem' head)
-    (NOV: ~overlap w wraddr wrlen min (max+dw+pw-min)),
+    (NOV: ~overlap w wraddr wrlen min (max+dw+dwb+pw-min)),
     LLSame mem (setmem w e wrlen mem' wraddr v) head.
 Proof.
   intros. revert head mem' LLS LLB. cofix IH; intros.
@@ -7047,7 +7050,7 @@ Proof.
     pose (a - min) as i. replace (a) with (min+i) by lia.
     eapply noverlap_index_r. exact NOV. lia.
 
-    pose (dw + a - min) as i. replace (dw+a) with (min+i) by lia.
+    pose (dw + dwb + a - min) as i. replace (dw+dwb+a) with (min+i) by lia.
     eapply noverlap_index_r. exact NOV. lia.
 Qed.
 
@@ -7929,10 +7932,30 @@ Proof.
   eapply KeyAtNext; try eassumption.
 Qed.
 
+Theorem key_at_ctr {head key ctr mem curr}:
+  forall
+    (DstCurr: node_distance mem head curr ctr)
+    (NotIn: forall i : nat, (i < ctr)%nat -> ~ key_in_linked_list mem head key i)
+    (KEY: list_node_value mem curr = Some key),
+  key_in_linked_list mem head key ctr.
+Proof.
+  intro; gdep key.
+  induction DstCurr. econstructor. unfold list_node_value.
+  destruct node; try contradiction. now rewrite <-KEY.
+
+  intros. injection KEY; intros H; now rewrite H.  econstructor; try eassumption.
+  intro; eapply (NotIn O); try lia; try constructor; try assumption.
+  apply IHDstCurr.
+  intros. intro. apply (NotIn (S i)). lia. econstructor; try eassumption.
+  intro; eapply (NotIn O); try lia; try constructor; try assumption.
+  assumption.
+Qed.
+
+
 Theorem noverlap_llforall:
   forall mem h p len v
-    (NOV: LLForall (fun _ n => ~overlap w n (dw+pw) p len) mem h),
-  LLForall (fun _ n => ~overlap w n (dw+pw) p len) (setmem w e len mem p v) h.
+    (NOV: LLForall (fun _ n => ~overlap w n (dw+dwb+pw) p len) mem h),
+  LLForall (fun _ n => ~overlap w n (dw+dwb+pw) p len) (setmem w e len mem p v) h.
 Proof.
   cofix IH. intros. inversion NOV; subst. constructor.
   destruct h;[discriminate|]. eapply LLForall_cons. unfold list_node_next.
@@ -7943,20 +7966,20 @@ Qed.
 
 Theorem noverlap_llsame_llforall:
   forall mem h p len v
-    (NOV: LLForall (fun _ n => ~overlap w n (dw+pw) p len) mem h),
+    (NOV: LLForall (fun _ n => ~overlap w n (dw+dwb+pw) p len) mem h),
   LLSame mem (setmem w e len mem p v) h.
 Proof.
   cofix IH. intros. inversion NOV; subst. constructor.
   destruct h;[discriminate|]. injection NEXT; intros H. eapply LLSame_cons with (next:=next); try easy.
   1-2:unfold list_node_value, list_node_next; rewrite getmem_noverlap; try easy.
-  apply noverlap_shrink with (a1:=N.pos p0) (len1:=dw+pw). rewrite msub_diag; lia. assumption.
+  apply noverlap_shrink with (a1:=N.pos p0) (len1:=dw+dwb+pw). rewrite msub_diag; lia. assumption.
   rewrite N.add_comm; eapply noverlap_index_l. eassumption. lia.
   now apply IH.
 Qed.
 
 Theorem noverlap_llsame_llforall_trans:
   forall mem mem' h p len v
-    (NOV: LLForall (fun _ n => ~overlap w n (dw+pw) p len) mem h)
+    (NOV: LLForall (fun _ n => ~overlap w n (dw+dwb+pw) p len) mem h)
     (LLS: LLSame mem mem' h),
   LLSame mem (setmem w e len mem' p v) h.
 Proof.
@@ -7964,7 +7987,7 @@ Proof.
   destruct h;[discriminate|]. injection NEXT; intros H. eapply LLSame_cons with (next:=next); try easy.
   1-2:unfold list_node_value, list_node_next; rewrite getmem_noverlap; try easy.
   1,3: inversion LLS; assumption.
-  apply noverlap_shrink with (a1:=N.pos p0) (len1:=dw+pw). rewrite msub_diag; lia. assumption.
+  apply noverlap_shrink with (a1:=N.pos p0) (len1:=dw+dwb+pw). rewrite msub_diag; lia. assumption.
   rewrite N.add_comm; eapply noverlap_index_l. eassumption. lia.
   apply IH; try easy. inversion LLS; subst; align_next. assumption.
 Qed.
@@ -8080,12 +8103,24 @@ Proof.
     econstructor; try easy; try eassumption; constructor.
 Qed.
 
+
+Theorem ctr_le_len_step {head len ctr mem curr}:
+  forall (ZF: curr <> 0)
+    (DstCurr: node_distance mem head curr ctr)
+    (Len: node_distance mem head NULL len),
+  (S ctr <= len)%nat.
+Proof.
+  intros.
+  destruct (Nat.le_gt_cases (S ctr) len); try assumption.
+  pose proof (node_dist_tri (PeanoNat.lt_n_Sm_le _ _ H) Len DstCurr).
+  inversion H0; subst. contradiction. discriminate.
+Qed.
 End ll_section.
 (* Override psimpl_hook using `Ltac psimpl_hook ::= psimpl.` To enable
    the psimplifier.  This is a workaround to keep the theory library independent
    of the simplifier. *)
 Global Ltac psimpl_hook := idtac.
-Global Ltac llunfold := unfold P.w, P.e, P.dw, P.pw in *.
+Global Ltac llunfold := unfold P.w, P.e, P.dw, P.dwb, P.pw in *.
 Global Ltac llsame_solve :=
     repeat (psimpl_hook
             || llunfold

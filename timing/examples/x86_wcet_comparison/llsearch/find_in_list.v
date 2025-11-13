@@ -70,7 +70,8 @@ Module p <: LinkedListParams.
   Definition w := 64.
   Definition e := LittleE.
   Definition dw := 4.
-  Definition pw := 4.
+  Definition dwb := 4.
+  Definition pw := 8.
   Global Transparent w e dw pw.
 End p.
 Module LL := Theory_amd64.LinkedLists p.
@@ -89,12 +90,12 @@ Definition time_of_find_in_linked_list
         | Some idx =>
             N.of_nat idx
         end * (
-        test_r64_r64 + jnz_addr + cmp_r32_r32 + jz_addr + mov_r64_m64
+        test_r64_r64 + jnz_addr + cmp_r64_m64 + jz_addr + mov_r64_m64
         ) + (match found_idx with
             | None =>
                 xor_r32_r32
             | Some _ =>
-                mov_r64_r64
+                mov_r64_r64 + cmp_r64_m64 + jz_addr
             end) + ret.
 
 Definition timing_postcondition (mem : memory) 
@@ -110,21 +111,26 @@ Definition timing_postcondition (mem : memory)
 Definition find_in_linked_list_timing_invs (s : store)
     (sp : N) (head : addr) (key : N) (len : nat) (t:trace) : option Prop :=
 match t with (Addr a, s) :: t' => match a with
-| 0x0 => Some (exists ctr mem curr, 
-    s V_MEM64 = mem /\ s R_RDI = curr /\
+| 0x0 => Some (exists mem, 
+    s V_MEM64 = mem /\ s R_RDI = head /\
     s R_RSI mod 2 ^ 32 = key /\
+    node_distance mem head NULL len /\
+    cycle_count_of_trace t' = 0
+  )
+| 0x1b => Some (exists ctr mem curr,
+    s V_MEM64 = mem /\ s R_RDI = curr /\
+    (if s R_ZF =? 1 then s R_RDI = 0 else s R_RDI <> NULL) /\
+    s R_RSI mod 2 ^ 32 = key /\
+    (curr =? 0) =(s R_ZF =? 1)/\
     node_distance mem head curr ctr /\
     node_distance mem head NULL len /\
     (ctr <= len)%nat /\
     (forall i, (i < ctr)%nat -> ~ key_in_linked_list mem head key i) /\
     (forall fuel, key_in_linked_list mem head key fuel -> (ctr <= fuel)%nat) /\
-    cycle_count_of_trace t' = 0
-  )
-| 0x1b => Some (exists k,
     (cycle_count_of_trace t' = 
         jmp_addr + test_r64_r64 +
-        k * (
-          test_r64_r64 + jnz_addr + cmp_r32_r32 + jz_addr + mov_r64_m64
+        N.of_nat ctr  * (
+        cmp_r64_m64 + test_r64_r64 + jnz_addr + jz_addr + mov_r64_m64
         )
     )
   )
@@ -150,6 +156,7 @@ Lemma le_cases : forall n m,
     (n <= m -> n < m \/ n = m)%nat.
 Proof. lia. Qed.
 
+(*
 Lemma curr_not_in : forall mem head curr ctr key,
   node_distance mem head curr ctr ->
   (curr =? 0) = false ->
@@ -165,6 +172,7 @@ Proof.
       rewrite N.eqb_refl in H1. inversion H1.
     assumption.
 Qed.
+ *)
 
 Theorem find_in_linked_list_timing:
   forall s t s' x' sp head key len
@@ -187,9 +195,7 @@ Proof using.
 
     Local Ltac step := tstep x64_step.
     simpl. rewrite ENTRY. unfold entry_addr. step.
-    exists 0%nat, (s V_MEM64), head.
-    repeat split; auto; try lia.
-    apply Dst0.
+    repeat (reflexivity || eexists || eassumption || split).
 
     intros.
     eapply startof_prefix in ENTRY; try eassumption.
@@ -199,8 +205,86 @@ Proof using.
 
     destruct_inv 64 PRE.
 
-    destruct PRE as (ctr & mem & curr & MEM & P0 & P1 & DstCurr & Len &
-                      CtrLen & NotIn & In & Cycles).
-Qed.
+    destruct PRE as (mem & MEM & Head & DstCurr & Len & Cycles).
 
+    step. step. exists O; repeat (eexists || eassumption || reflexivity || split || hammer).
+    destruct head; simpl; (reflexivity || intro; discriminate).
+    destruct head; reflexivity.
+    constructor.
+
+    destruct PRE as (ctr & mem & curr & MEM & CURR & ZFRDI & P1 & ZF & DstCurr & Len &
+                      CtrLen & NotIn & In & Cycles).
+    step. 
+    1-2: pose proof (H:=models_var R_ZF MDL); cbv [archtyps x64typctx] in H;
+      destruct (s' R_ZF); try replace p with xH in * by lia; try discriminate; simpl in ZF;
+      try rewrite N.eqb_eq in ZF; try rewrite N.eqb_neq in ZF. simpl in ZFRDI.
+
+    simpl in BC. step; cycle 1. { right.
+      (* Address 31 (0x1F): return NULL because the key is missing. *)
+    clear H p; simpl in ZF; symmetry in ZF; subst curr.
+    elimstore. rewrite (node_distance_uniq DstCurr Len) in *; clear CtrLen.
+    { inversion Len; subst. split.
+      intros H; destruct H as (loc & H2 & H3). lia.
+      unfold time_of_find_in_linked_list. hammer.
+      split. intro. destruct H as (loc & B & InLoc). apply (NotIn loc); assumption.
+      unfold time_of_find_in_linked_list. hammer.
+    }
+    }
+    simpl in ZFRDI.
+
+    step. step. step. {
+      (* Addr 35 (0x23): found key. *)
+      left. exists ctr. repeat (eassumption || split).
+      Search key_in_linked_list.
+      rewrite P1 in *.
+      intros. eapply key_at_ctr; try eassumption. destruct curr; simpl; try contradiction.
+      rewrite N.eqb_eq in BC0; rewrite BC0. Unset Printing Notations. unfold p.w, p.e, p.dw. reflexivity.
+      unfold time_of_find_in_linked_list; hammer.
+    }
+
+    step. step. {
+      (* Addr 24 (0x18): inductive loop case *)
+      exists (S ctr); repeat (eexists || eassumption || reflexivity || split).
+      destruct (getmem _ _ _ _ (8+curr)) eqn:Eq. reflexivity. simpl. intro; discriminate.
+      destruct (getmem _ _ _ _ (8+curr)) eqn:Eq. reflexivity. simpl. reflexivity.
+      apply node_distance_next_S_len with (dst:=curr).
+      destruct curr; try contradiction; unfold list_node_next, p.w, p.e, p.pw, p.dw, p.dwb. reflexivity.
+      eapply distance_null_imp_well_formed; eassumption.
+      eassumption.
+      simpl in ZFRDI.
+      Check ctr_le_len_step.
+      eapply ctr_le_len_step; eassumption.
+      intros; destruct (Nat.lt_trichotomy i ctr) as [Lt | [Eq | Gt]]; (lia || (now apply NotIn) || subst i).
+      intro. (* TODO: make a theorem for this typical case? *)
+      pose proof (Help:=key_in_linked_list_value_equal _ _ _ _ _ H1 DstCurr). destruct curr; try contradiction; injection Help; intros.
+      rewrite P1, H2, N.eqb_neq in BC0. contradiction.
+      intros. rewrite CURR, P1 in *; clear MEM CURR P1. rewrite N.eqb_neq in BC0.
+      destruct (Nat.lt_trichotomy ctr fuel) as [Lt | [Eq | Gt]]; try lia; try subst fuel.
+      pose proof (Help:=key_in_linked_list_value_equal _ _ _ _ _ H0 DstCurr). destruct curr; try contradiction; injection Help; intros. rewrite H1 in BC0. contradiction.
+      specialize (NotIn _ Gt). contradiction.
+      hammer.
+    }
+
+    rewrite CURR in *. replace p0 with xH in * by lia; clear H. simpl in BC. discriminate.
+Qed.
 End TimingProof.
+
+Require Import i5_7300u.
+Module i5_7300u_llfind := TimingProof i5_7300u.
+
+Goal forall (len : nat) (found_idx : option nat) (t : trace),
+    i5_7300u_llfind.time_of_find_in_linked_list len found_idx t =
+    (i5_7300u_llfind.find_in_list.cycle_count_of_trace t =
+      47 +
+      match found_idx with
+      | Some idx => N.of_nat idx
+      | None => N.of_nat len
+      end * 99 + match found_idx with
+                    | Some _ => 47
+                    | None => 1
+                    end).
+    intros.
+    unfold i5_7300u_llfind.time_of_find_in_linked_list. simpl.
+    unfold i5_7300u.ret, i5_7300u.mov_m64_r64, i5_7300u.xor_r32_r32.
+    psimpl. reflexivity.
+Qed.

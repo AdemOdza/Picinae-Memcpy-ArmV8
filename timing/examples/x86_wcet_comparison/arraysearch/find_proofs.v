@@ -241,3 +241,24 @@ Proof using.
 Qed.
 
 End TimingProof.
+
+Require Import i5_7300u.
+Module i5_7300u_find := TimingProof i5_7300u.
+Import i5_7300u.
+
+Goal forall len found_idx t,
+    i5_7300u_find.time_of_find len found_idx t =
+    (i5_7300u_find.findAuto.cycle_count_of_trace t <=
+        (if len =? 0
+            then 39
+            else 76 + match found_idx with
+                        | Some idx => idx
+                        | None => 1 + len
+                        end * 28)).
+    intros.
+    unfold i5_7300u_find.time_of_find.
+    unfold cmp_r64_m64, jnz_addr, jnc_addr, mov_r32_i, ret.
+    simpl. psimpl.
+    reflexivity.
+Qed.
+

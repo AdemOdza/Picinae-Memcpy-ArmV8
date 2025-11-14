@@ -2,7 +2,7 @@
 # Use this makefile to configure all relevant CPU / compiler options.
 
 # Override the default CPU ISA
-MARCH = rv32im_zicsr_zifencei_zicntr_zbb
+MARCH = rv32im_zicsr_zifencei_zbb
 
 # Override the default RISC-V GCC prefix
 RISCV_PREFIX ?= ~/Desktop/riscv-none-elf/bin/riscv-none-elf-
@@ -14,7 +14,7 @@ EFFORT = -Os
 USER_FLAGS += -ggdb -gdwarf-3
 
 # Adjust processor IMEM size
-USER_FLAGS += -Wl,--defsym,__neorv32_rom_size=16k
+USER_FLAGS += -Wl,--defsym,__neorv32_rom_size=32k
 
 # Adjust processor DMEM size
 USER_FLAGS += -Wl,--defsym,__neorv32_ram_size=8k

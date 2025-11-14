@@ -34,8 +34,26 @@ Import Program_bubble_sort_theta_n2 bubble_sort_theta_n2Auto.
 Definition time_of_bubble_sort_theta_n2
         (len : N) (t : trace) :=
     (* ----------------------------------------- *)
-    (* lower bound, return if len = 0 *)
-    tslli 2 + tadd + taddi + ttbeq + tjalr <=
+    (* lower bound *)
+    tslli 2 + tadd + taddi +
+    (* outer loop full iterations *)
+    len * (
+        tfbeq + taddi + tjal +
+        (* inner loop full iterations *)
+        (len - 1) * (
+            ttbne +
+            tlw + tlw +
+            N.min ttbgeu (tfbgeu + tsw + tsw) +
+            taddi
+        ) +
+        (* inner loop partial iteration *)
+        tfbne +
+        taddi + tjal
+    ) +
+    (* outer loop partial iteration *)
+    ttbeq +
+    (* return *)
+    tjalr <=
     (* ----------------------------------------- *)
     cycle_count_of_trace t <=
     (* ----------------------------------------- *)
@@ -75,7 +93,19 @@ match t with (Addr a, s) :: t' => match a with
                    s R_A4 = a4 /\
                    a4 <= len /\
                    arr + 4 * len < 2^32 /\
-                   tslli 2 + tadd + taddi <=
+                   tslli 2 + tadd + taddi +
+                   a4 * (
+                       tfbeq + taddi + tjal +
+                       (len - 1) * (
+                           ttbne +
+                            tlw + tlw +
+                            N.min ttbgeu (tfbgeu + tsw + tsw) +
+                            taddi
+                       ) +
+                       (* inner loop partial iteration *)
+                       tfbne +
+                       taddi + tjal
+                   ) <=
                    (* ----------------------------------------- *)
                    cycle_count_of_trace t' <=
                    (* ----------------------------------------- *)
@@ -106,7 +136,26 @@ match t with (Addr a, s) :: t' => match a with
                    0 < len /\
                    a4 < len /\
                    arr + 4 * len < 2^32 /\
-                   tslli 2 + tadd + taddi <=
+                   tslli 2 + tadd + taddi +
+                   a4 * (
+                       tfbeq + taddi + tjal +
+                       (len - 1) * (
+                           ttbne +
+                            tlw + tlw +
+                            N.min ttbgeu (tfbgeu + tsw + tsw) +
+                            taddi
+                       ) +
+                       (* inner loop partial iteration *)
+                       tfbne +
+                       taddi + tjal
+                   ) +
+                   tfbeq + taddi + tjal +
+                   (* number of inner loops so far *)
+                   inner_loop_count * (
+                        ttbne + tlw + tlw +
+                        N.min ttbgeu (tfbgeu + tsw + tsw) +
+                        taddi
+                    ) <=
                    (* ----------------------------------------- *)
                    cycle_count_of_trace t' <=
                    (* ----------------------------------------- *)
@@ -219,6 +268,7 @@ Proof using.
         repeat step.
         do 2 eexists. repeat split; eauto.
             rewrite N.mod_small; lia.
+        rewrite N.mod_small by lia.
         hammer.
         replace (s' R_A1) with (1 + inner_loop_count) by lia.
         rewrite N.mod_small by lia. hammer.

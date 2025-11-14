@@ -318,3 +318,40 @@ Proof using.
 Qed.
 
 End TimingProof.
+
+Require Import NEORV32.
+Module NRV32 := NEORV32 NEORV32BaseConfig.
+Module NEORV32TimingProof := TimingProof NRV32.
+Import NEORV32TimingProof NRV32.
+
+Goal forall gp mem t,
+    time_of_vTaskSwitchContext t gp mem = 
+    (vTaskSwitchContextAuto.cycle_count_of_trace t = 
+        (if uxSchedulerSuspended gp mem =? 0
+        then
+        (if
+            mem Ⓓ[ 4 + mem Ⓓ[ next_ready_task gp mem ] ] =?
+            (31 ⊖ clz (mem Ⓓ[ gp ⊖ 1920 ]) 32) * 20 ⊖ 916 ⊕ gp
+            then
+            217 + 16 * T_data_latency + 2 * T_inst_latency +
+            clz (uxTopReadyPriority gp mem) 32
+            else
+            211 + 14 * T_data_latency + 3 * T_inst_latency +
+            clz (uxTopReadyPriority gp mem) 32) +
+        (6 * T_data_latency + T_inst_latency)
+        else 18 + (2 * T_data_latency + T_inst_latency))).
+Proof.
+    intros. unfold time_of_vTaskSwitchContext.
+    unfold tlw, tsw, taddi, tfbne, ttbne, ttbgeu, tfbgeu, tjal, tjalr.
+    psimpl.
+    unfold ttbeq, tclz, tsub, tmul, tadd, tlui, tfbeq. psimpl.
+    unfold T_shift_latency, NEORV32BaseConfig.CPU_FAST_SHIFT_EN.
+    unfold T_mul_latency, NEORV32BaseConfig.CPU_FAST_MUL_EN.
+    psimpl.
+    repeat rewrite <- N.add_assoc.
+    replace (217 + _) with (217 + 16 * T_data_latency + 2 * T_inst_latency + clz (uxTopReadyPriority gp mem) 32) by lia.
+    replace (211 + _) with (211 + 14 * T_data_latency + 3 * T_inst_latency + clz (uxTopReadyPriority gp mem) 32) by lia.
+    replace (T_data_latency + _) with (6 * T_data_latency + T_inst_latency) by lia.
+    replace (T_data_latency + _) with (2 * T_data_latency + T_inst_latency) by lia.
+    repeat rewrite <- N.add_assoc. reflexivity.
+Qed.

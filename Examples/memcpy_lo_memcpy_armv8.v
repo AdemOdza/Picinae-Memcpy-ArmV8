@@ -4,7 +4,7 @@ file: memcpy.lo
 function: memcpy
 *)
 
-Require Import Picinae_armv8.
+Require Import Picinae_armv8_pcode.
 Require Import NArith.
 Require Import Lia.
 Open Scope N.
@@ -167,6 +167,7 @@ Definition memcpy_lo_memcpy_armv8 : program := fun _ a => match a with
 	)
 )
 
+*)
 (* 0x00100020: ldp x6,x7,[x1] *)
 (*    1048608: ldp x6,x7,[x1] *)
 | 0x100020 => Some (4,

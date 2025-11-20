@@ -1,4 +1,4 @@
-@SET coqc="C:\Coq\bin\coqc.exe"
+@SET coqc="C:\Coq-Platform~8.20~2025.01\bin\coqc.exe"
 @IF NOT EXIST %coqc% (
   @ECHO Error: %coqc% does not exist.
   @ECHO Please edit the first line of this batch file to point to coqc.exe.
@@ -30,6 +30,8 @@
 %coqc% Picinae_amd64.v
 @IF ERRORLEVEL 1 GOTO :ErrorExit
 %coqc% Picinae_armv8_pcode.v
+@IF ERRORLEVEL 1 GOTO :ErrorExit
+%coqc% Examples\memcpy_lo_memcpy_armv8.v
 @IF ERRORLEVEL 1 GOTO :ErrorExit
 @ECHO Picinae build succeeded!
 @GOTO Done

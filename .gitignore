@@ -22,3 +22,5 @@ Makefile.coq
 Makefile.coq.conf
 .Makefile.coq.d
 *.cache
+Examples/windows_tests.bat
+windows_build.bat

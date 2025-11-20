@@ -1,4 +1,4 @@
-@SET coqc="C:\Coq\bin\coqc.exe"
+@SET coqc="C:\Coq-Platform~8.20~2025.01\bin\coqc.exe"
 @IF NOT EXIST %coqc% (
   @ECHO Error: %coqc% does not exist.
   @ECHO Please edit the first line of this batch file to point to coqc.exe.

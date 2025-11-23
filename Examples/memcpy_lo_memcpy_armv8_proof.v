@@ -41,33 +41,51 @@ Section Invariants.
     Variable mem : memory    (* initial memory state *).
     Variable raddr : N       (* return address (R_X30) *).
 
+    Variable r0 : N        (* memcpy: 1st pointer arg (R_X0), destination address *).
+    Variable r1 : N        (* memcpy: 2nd pointer arg (R_X1), source address *).
+    Variable r2 : N        (* memcpy: 2nd pointer arg (R_X2), byte count *).
+
     Definition mem' fbytes := setmem 64 LittleE 40 mem (sp ⊖ 48) fbytes.
-
-    Definition postcondition (s:store) := exists n k fb,
-        (* s V_MEM64 = mem' fb /\ *)
-        s R_X0 = n /\
-        (* strcaseeq (mem' fb) arg1 arg2 k /\ *)
-        (n=0 -> (mem' fb) Ⓑ[arg1+k] = 0).
-
-
-    (* Correctness specification:  memset yields a memory state identical to
-    starting memory m except with addresses p..p+len-1 filled with byte c.
-    It also returns p in register r0. *)
-    (*TODO, The definition has not been changed for memcpy yet*)
+(* 
     Definition filled m p c len :=
-    N.recursion m (fun i m' => m'[Ⓑ p+i := c]) len.
+        N.recursion m (fun i m' => m'[Ⓑ p+i := c]) len. *)
 
+    Definition filled m dest source len :=
+        N.recursion m (fun i m' => m'[Ⓑ dest+i := m' Ⓑ[source + i]]) len.
 
-    (*TODO, The definition has not been changed for memcpy yet*)
-    Definition postcondition m dest c len s :=
-    s R_R0 = dest /\ s V_MEM32 = filled m p c len.
+    Definition regs (s:store) m source dest len r0 r1 r2:=
+        s V_MEM64 = filled m source dest len 
+        /\ s R_X0 = r0 
+        /\ s R_X1 = r1 
+        /\ s R_X2 = r2.
 
+    (* Correctness specification:  memcpy yields a memory state identical to
+    starting memory m except with addresses p..p+len-1 filled with the corresponding byte in address source..source+len-1.
+    It also returns p in register r0. *)
+    Definition postcondition m dest source len s :=
+    s R_X0 = dest /\ s V_MEM64 = filled m dest source len.
 
     (*
     POSTCONDITIONS: 
-
     Return value is a valid pointer or null. 
     Return pointer should match dest.
     Memory at dest of size count should match memory at src of size count.
     *)
+
+    Definition memcpy_invariants (t := trace) := 
+        match t with (Addr a, s)::_ => 
+            match a with
+            | 1048576 => _ (* Entrypoint *)
+            | 1048880 => _ (* Loop entrypoint *)
+            (* | 1048920 => _ (* Exited loop *) *)
+            | 1048968 => _ (* Return *)
+            | _ => None
+            end 
+        | _ => None
+    end. 
 End Invariants.
+
+Lemma filled0: ∀ m p c, filled m p c 0 = m.
+Proof.
+  intros. reflexivity.
+Qed.

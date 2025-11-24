@@ -66,8 +66,8 @@ Section Invariants.
 		 length we've copied so far (k)*)
 	Definition regs (s:store) m source dest k len : Prop :=
 	  	s V_MEM64 = filled m source dest k 
-		/\ s R_X0 = dst
-	  	/\ s R_X1 = src ⊕ k 
+		/\ s R_X0 = dest
+	  	/\ s R_X1 = source ⊕ k 
 	  	/\ s R_X2 = len ⊖ k.
 
 				(*Working on it...*)

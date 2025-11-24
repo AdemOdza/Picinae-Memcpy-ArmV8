@@ -233,9 +233,12 @@ Proof.
 Qed.
 
 Lemma filled_succ:
-  ∀ m dest source k, (filled m dest source k)[Ⓑdest+(N.succ k):= m Ⓑ[source + (N.succ k)]] = filled m dest source (N.succ k).
+  ∀ m dest source k, (filled m dest source k)[Ⓑdest+k:= m Ⓑ[source + k]] = filled m dest source (N.succ k).
 Proof.
-Admitted.
+  intros. unfold filled. rewrite N.recursion_succ; try reflexivity.
+   intros i j H m1 m2 H'. subst. reflexivity.
+Qed.
+
 
 (* Fixpoint fill_n_more m p c n :=
   match n with O => m | S n' => fill_n_more m p c n' [ⒷN.of_nat n' + p := c] end. *)

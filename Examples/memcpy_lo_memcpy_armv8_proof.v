@@ -72,8 +72,8 @@ Section Invariants.
 
 				(*Working on it...*)
 	Definition common_inv source dest len s m r1 k :=
-  		regs s m sourse dest k source r1 (len ⊖ k) /\
-  		s R_R3 = source ⊕ k /\ k <= len.
+		regs s m sourse dest k source r1 (len ⊖ k) (*OR regs s m sourse dest (len ⊖ k) len*)
+		/\ s R_R3 = source ⊕ k /\ k <= len.
 
 
     (* Correctness specification:  memcpy yields a memory state identical to

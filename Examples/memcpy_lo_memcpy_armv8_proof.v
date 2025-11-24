@@ -159,12 +159,65 @@ Section Invariants.
         /\ ((len >= 16 /\ s R_PC  = 0x100020)   (* 16-byte path *)
             \/ (len < 16 /\ s R_PC  = 0x100034)). (* bit test *)
 
+
     (* Correctness specification:  memcpy yields a memory state identical to
     starting memory m except with addresses p..p+len-1 filled with the corresponding byte in address source..source+len-1.
     It also returns p in register r0. *)
     Definition postcondition m dest source len s :=
     s R_X0 = dest /\ s V_MEM64 = filled m dest source len.
 
+        Definition memcpy_invset (dest src len : N) (t : trace) :=
+        match t with (Addr a, s) :: _ => match a with
+
+        (* Entry point: 0x100000 *)
+        | 0x100000 => Some (entry_inv dest src len s mem)
+
+        (* After endpoints calculation: 0x100008 *)
+        | 0x100008 => Some (endpoints_inv dest src len s 
+                           /\ entry_inv dest src len s mem)
+
+        (* First comparison: 0x100008 *)
+        | 0x10000c => Some (inv_after_cmp128 dest src len s mem)
+
+        (* 16-byte path: 0x100020 *)
+        | 0x100020 => Some (inv_16byte dest src len s mem)
+
+        (* 8-byte path: 0x100038 *)
+        | 0x100038 => Some (inv_8byte dest src len s mem)
+
+        (* 4-byte path: 0x100054 *)
+        | 0x100054 => Some (inv_4byte dest src len s mem)
+
+        (* 1-byte path: 0x100070 *)
+        | 0x100070 => Some (inv_1byte dest src len s mem)
+
+        (* Medium path entry: 0x100090 *)
+        | 0x100090 => Some (inv_medium dest src len s mem)
+
+        (* Large path entry: 0x100100 *)
+        | 0x100100 => Some (inv_large_entry dest src len s mem)
+
+        (* Loop header: 0x100128 *)
+        | 0x100128 => Some (∃ k, inv_large_loop dest src len s mem k)
+
+        (* Loop body: 0x100130 *)
+        | 0x100130 => Some (∃ k, inv_large_loop dest src len s mem k
+                           /\ k < len)
+
+        (* Loop back test: 0x100154 *)
+        | 0x100154 => Some (∃ k, inv_large_loop dest src len s mem k
+                           /\ (k < len))
+
+        (* Cleanup: 0x100158 *)
+        | 0x100158 => Some (∃ k, inv_large_loop dest src len s mem k
+                           /\ k >= len - 64)
+
+        (* Exit: 0x100188 *)
+        | 0x100188 => Some (postcondition mem dest src len s)
+
+        | _ => None
+        end
+        | _ => None end.
     (*
     POSTCONDITIONS: 
     Return value is a valid pointer or null. 
@@ -172,17 +225,6 @@ Section Invariants.
     Memory at dest of size count should match memory at src of size count.
     *)
 
-    Definition memcpy_invariants m source dest len (t := trace) := 
-        match t with (Addr a, s)::_ => 
-            match a with
-			| 1048576 => _ (* Entrypoint *) Some (regs s m source dest 0)
-			| 1048880 => _ (* Loop entrypoint *) 
-            (* | 1048920 => _ (* Exited loop *) *)
-            | 1048968 => _ (* Return *)
-            | _ => None
-            end 
-        | _ => None
-    end. 
 End Invariants.
 
 Lemma filled0: ∀ m p c, filled m p c 0 = m.

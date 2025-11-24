@@ -50,6 +50,8 @@ Section Invariants.
     Definition filled m p c len :=
         N.recursion m (fun i m' => m'[Ⓑ p+i := c]) len. *)
 
+		(*should it be m' or m for source+i??*)
+			(*Note: need to keep the same header format for all*)
     Definition filled m dest source len :=
         N.recursion m (fun i m' => m'[Ⓑ dest+i := m' Ⓑ[source + i]]) len.
 
@@ -58,6 +60,21 @@ Section Invariants.
         /\ s R_X0 = r0 
         /\ s R_X1 = r1 
         /\ s R_X2 = r2.
+
+	
+		(*Would this not be better? we can distinguish between the total length needed to be copied (len) and the 
+		 length we've copied so far (k)* )
+	Definition memcpy_regs (s:store) m source dest k len : Prop :=
+	  	s V_MEM64 = filled m source dest k 
+		/\ s R_X0 = dst
+	  	/\ s R_X1 = src ⊕ k 
+	  	/\ s R_X2 = len ⊖ k.
+
+				(*Working on it...*)
+	Definition common_inv source dest len s m r1 k :=
+  		regs s m sourse dest k source r1 (len ⊖ k) /\
+  		s R_R3 = source ⊕ k /\ k <= len.
+
 
     (* Correctness specification:  memcpy yields a memory state identical to
     starting memory m except with addresses p..p+len-1 filled with the corresponding byte in address source..source+len-1.

@@ -63,7 +63,7 @@ Section Invariants.
 
 	
 		(*Would this not be better? we can distinguish between the total length needed to be copied (len) and the 
-		 length we've copied so far (k)* )
+		 length we've copied so far (k)*)
 	Definition memcpy_regs (s:store) m source dest k len : Prop :=
 	  	s V_MEM64 = filled m source dest k 
 		/\ s R_X0 = dst

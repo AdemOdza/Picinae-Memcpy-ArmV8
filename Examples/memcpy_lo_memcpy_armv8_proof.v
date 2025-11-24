@@ -138,7 +138,26 @@ Section Invariants.
         /\ k mod 64 = 0    (* k is multiple of 64 *)
         /\ k <= len.     
         
- 
+ (* After first comparison: cmp x2, #0x80 *)
+    Definition inv_after_cmp128 (dest : N) (src : N) (len : N) (s : store)
+                                (m : memory) :=
+        endpoints_inv dest src len s
+        /\ ((len > 128 /\ next_addr = 0x100100)   (* jump to large *)
+            \/ (len <= 128 /\ next_addr = 0x100010)). (* continue *)
+
+    (* After second comparison: cmp x2, #0x20 *)
+    Definition inv_after_cmp32 (dest : N) (src : N) (len : N) (s : store)
+                               (m : memory) :=
+        endpoints_inv dest src len s
+        /\ ((len > 32 /\ next_addr = 0x100090)    (* jump to medium *)
+            \/ (len <= 32 /\ next_addr = 0x100018)). (* continue *)
+
+    (* After third comparison: cmp x2, #0x10 *)
+    Definition inv_after_cmp16 (dest : N) (src : N) (len : N) (s : store)
+                               (m : memory) :=
+        endpoints_inv dest src len s
+        /\ ((len >= 16 /\ next_addr = 0x100020)   (* 16-byte path *)
+            \/ (len < 16 /\ next_addr = 0x100034)). (* bit test *)
     (* Correctness specification:  memcpy yields a memory state identical to
     starting memory m except with addresses p..p+len-1 filled with the corresponding byte in address source..source+len-1.
     It also returns p in register r0. *)

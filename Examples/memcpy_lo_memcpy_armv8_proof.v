@@ -62,7 +62,7 @@ Section Invariants.
         /\ s R_X2 = r2.
 
 	
-		(*Would this not be better? we can distinguish between the total length needed to be copied (len) and the 
+	(*Would this not be better? we can distinguish between the total length needed to be copied (len) and the 
 		 length we've copied so far (k)*)
 	Definition regs (s:store) m source dest k len : Prop :=
 	  	s V_MEM64 = filled m source dest k 
@@ -89,11 +89,11 @@ Section Invariants.
     Memory at dest of size count should match memory at src of size count.
     *)
 
-    Definition memcpy_invariants (t := trace) := 
+    Definition memcpy_invariants m source dest len (t := trace) := 
         match t with (Addr a, s)::_ => 
             match a with
-            | 1048576 => _ (* Entrypoint *)
-            | 1048880 => _ (* Loop entrypoint *)
+			| 1048576 => _ (* Entrypoint *) Some (regs s m source dest 0)
+			| 1048880 => _ (* Loop entrypoint *) 
             (* | 1048920 => _ (* Exited loop *) *)
             | 1048968 => _ (* Return *)
             | _ => None

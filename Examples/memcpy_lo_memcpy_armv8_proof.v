@@ -54,28 +54,91 @@ Section Invariants.
 			(*Note: need to keep the same header format for all*)
     Definition filled m dest source len :=
         N.recursion m (fun i m' => m'[Ⓑ dest+i := m' Ⓑ[source + i]]) len.
-
+(*
     Definition regs (s:store) m source dest len r0 r1 r2:=
         s V_MEM64 = filled m source dest len 
         /\ s R_X0 = r0 
         /\ s R_X1 = r1 
         /\ s R_X2 = r2.
-
+*)
 	
 	(*Would this not be better? we can distinguish between the total length needed to be copied (len) and the 
 		 length we've copied so far (k)*)
-	Definition regs (s:store) m source dest k len r0 r1 r2: Prop :=
-	  	s V_MEM64 = filled m source dest k 
-		/\ s R_X0 = dest
-	  	/\ s R_X1 = source ⊕ k 
-	  	/\ s R_X2 = len ⊖ k.
+    Definition regs (s : store) (m : memory) (dest : N) (src : N) (len : N)
+                    (dst_ptr : N) (src_ptr : N) (remaining : N) :=
+        s V_MEM64 = filled m dst_ptr src_ptr (len - remaining)
+        /\ s R_X0 = dst_ptr
+        /\ s R_X1 = src_ptr
+        /\ s R_X2 = remaining.
 
 				(*Working on it...*)
-	Definition common_inv source dest len s m r1 k :=
-		regs s m sourse dest k source r1 (len ⊖ k) (*OR regs s m sourse dest (len ⊖ k) len*)
-		/\ s R_R3 = source ⊕ k /\ k <= len.
+    Definition common_inv (dest : N) (src : N) (len : N) (s : store) (m : memory)
+                          (k : N) :=
+        regs s m dest src len (dest + k) (src + k) (len - k)
+        /\ k <= len
+        /\ s R_X30 = raddr.
 
+(* Entry invariants *)
+    Definition entry_inv (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        s R_X0 = dest
+        /\ s R_X1 = src
+        /\ s R_X2 = len
+        /\ s R_X30 = raddr
+        /\ dest + len < 2^64    (* no overflow *)
+        /\ src + len < 2^64.
 
+    (* Endpoint calculation invariant (after 0x100000-0x100004) *)
+    Definition endpoints_inv (dest : N) (src : N) (len : N) (s : store) :=
+        s R_X4 = src + len       (* source endpoint *)
+        /\ s R_X5 = dest + len.  (* destination endpoint *)
+
+    (* Alignment tracking for large copies *)
+    Definition align_inv (dest : N) (s : store) :=
+        s R_X14 = dest mod 16    (* alignment offset *)
+        /\ s R_X3 = dest - (dest mod 16).  (* 16-byte aligned base *)
+        
+        
+(* Path 1: 16-byte copy (16 <= len < 32) *)
+    Definition inv_16byte (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        16 <= len /\ len < 32
+        /\ common_inv dest src len s m 0.  (* k=0, no copy yet *)
+
+    (* Path 2: 8-byte copy (8 <= len < 16) *)
+    Definition inv_8byte (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        8 <= len /\ len < 16
+        /\ common_inv dest src len s m 0.
+
+    (* Path 3: 4-byte copy (4 <= len < 8) *)
+    Definition inv_4byte (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        4 <= len /\ len < 8
+        /\ common_inv dest src len s m 0.
+
+    (* Path 4: Byte-by-byte copy (len < 4) *)
+    Definition inv_1byte (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        len < 4
+        /\ common_inv dest src len s m 0.
+
+    (* Path 5: Medium copy (32 <= len < 128) *)
+    Definition inv_medium (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        32 <= len /\ len < 128
+        /\ common_inv dest src len s m 0.
+
+    (* Path 6: Large copy (len >= 128) with loop *)
+    Definition inv_large_entry (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
+        128 <= len
+        /\ align_inv dest s
+        /\ common_inv dest src len s m 0.
+
+    (* Loop invariant for 64-byte chunking *)
+    Definition inv_large_loop (dest : N) (src : N) (len : N) (s : store) (m : memory)
+                              (k : N) :=
+        128 <= len
+        /\ align_inv dest s
+        /\ common_inv dest src len s m k
+        /\ k mod 64 = 0    (* k is multiple of 64 *)
+        /\ k <= len.     
+        
+ 
     (* Correctness specification:  memcpy yields a memory state identical to
     starting memory m except with addresses p..p+len-1 filled with the corresponding byte in address source..source+len-1.
     It also returns p in register r0. *)

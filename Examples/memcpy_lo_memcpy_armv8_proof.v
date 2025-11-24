@@ -231,3 +231,8 @@ Lemma filled0: ∀ m p c, filled m p c 0 = m.
 Proof.
   intros. reflexivity.
 Qed.
+
+Lemma filled_succ:
+  ∀ m dest source k, (filled m dest source k)[Ⓑdest+(N.succ k):= m Ⓑ[source + (N.succ k)]] = filled m dest source (N.succ k).
+Proof.
+Admitted.

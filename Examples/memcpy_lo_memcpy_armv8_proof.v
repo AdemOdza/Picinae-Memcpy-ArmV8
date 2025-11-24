@@ -236,3 +236,14 @@ Lemma filled_succ:
   ∀ m dest source k, (filled m dest source k)[Ⓑdest+(N.succ k):= m Ⓑ[source + (N.succ k)]] = filled m dest source (N.succ k).
 Proof.
 Admitted.
+
+(* Fixpoint fill_n_more m p c n :=
+  match n with O => m | S n' => fill_n_more m p c n' [ⒷN.of_nat n' + p := c] end. *)
+
+(*
+    filled_n_more, filled_succ - Adem
+    filled4 - Dagmawet
+    filled8 - Avery
+    filled16 - Omar
+    filled32 - Ava
+*)

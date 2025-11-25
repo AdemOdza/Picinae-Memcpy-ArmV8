@@ -53,7 +53,7 @@ Section Invariants.
 		(*should it be m' or m for source+i??*)
 			(*Note: need to keep the same header format for all*)
     Definition filled m dest source len :=
-        N.recursion m (fun i m' => m'[Ⓑ dest+i := m' Ⓑ[source + i]]) len.
+        N.recursion m (fun i m' => m'[Ⓑ dest+i := m Ⓑ[source + i]]) len.
 (*
     Definition regs (s:store) m source dest len r0 r1 r2:=
         s V_MEM64 = filled m source dest len 
@@ -224,6 +224,9 @@ Section Invariants.
     Return pointer should match dest.
     Memory at dest of size count should match memory at src of size count.
     *)
+    
+    
+    
 
 End Invariants.
 
@@ -232,6 +235,7 @@ Proof.
   intros. reflexivity.
 Qed.
 
+ 
 Lemma filled_succ:
   ∀ m dest source k, (filled m dest source k)[Ⓑdest+k:= m Ⓑ[source + k]] = filled m dest source (N.succ k).
 Proof.
@@ -239,14 +243,3 @@ Proof.
    intros i j H m1 m2 H'. subst. reflexivity.
 Qed.
 
-
-(* Fixpoint fill_n_more m p c n :=
-  match n with O => m | S n' => fill_n_more m p c n' [ⒷN.of_nat n' + p := c] end. *)
-
-(*
-    filled_n_more, filled_succ - Adem
-    filled4 - Dagmawet
-    filled8 - Avery
-    filled16 - Omar
-    filled32 - Ava
-*)

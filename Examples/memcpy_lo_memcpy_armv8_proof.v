@@ -84,7 +84,7 @@ Section Invariants.
         /\ s R_X1 = src
         /\ s R_X2 = len
         /\ s R_X30 = raddr
-        /\ dest + len < 2^64    (* no overflow *)
+        /\ dest + len < 2^64 
         /\ src + len < 2^64.
 
     (* Endpoint calculation invariant (after 0x100000-0x100004) *)
@@ -243,3 +243,70 @@ Proof.
    intros i j H m1 m2 H'. subst. reflexivity.
 Qed.
 
+Lemma filled_mod : ∀ m dest src len,
+  filled m dest src len = 
+  N.recursion m (fun i m' => m'[Ⓑ dest + i := m Ⓑ[src + i]]) len.
+Proof.
+  intros m dest src len.
+  unfold filled.
+  reflexivity.
+Qed.
+
+Lemma filled_add : ∀ n m dest src k,
+  filled m dest src (k + n) =
+  N.recursion (filled m dest src k)
+    (fun i m' => m'[Ⓑ dest + k + i := m Ⓑ[src + k + i]]) n.
+Proof.
+  intros n m dest src k.
+  induction n using N.peano_ind; simpl.
+  - rewrite N.add_0_r. reflexivity.
+  - 
+    rewrite N.add_succ_r.
+    rewrite <- (filled_succ m dest src (k + n)).
+    rewrite IHn.
+    repeat rewrite N.add_assoc.
+    rewrite N.recursion_succ; try reflexivity.
+    intros i j H m1 m2 H'. subst. reflexivity.
+Qed.
+Lemma filled16 :
+  ∀ m dest src k,
+    filled m dest src (k + 16) =
+    N.recursion (filled m dest src k)
+      (fun i m' => m'[Ⓑ dest + k + i := m Ⓑ[src + k + i]]) 16.
+Proof.
+  intros. apply (filled_add 16 m dest src k).
+Qed.
+
+
+Require Import Coq.NArith.NArith.
+Require Import Coq.ZArith.ZArith.
+Require Import Lia.
+
+
+Theorem memcpy_functional_correctness :
+  ∀ s dest src len mem t s' x'
+    (ENTRY: startof t (x',s') = (Addr 0x100000, s))
+    (MDL: models arm8typctx s)
+    (MEM: s V_MEM64 = mem)
+    (R0: s R_X0 = dest)
+    (R1: s R_X1 = src)
+    (R2: s R_X2 = len),
+  satisfies_all memcpy_lo_memcpy_armv8
+    (fun t0 => memcpy_invset mem (s R_X30) dest src len t0)
+    program_exit
+    ((x',s')::t).
+Proof.
+  Local Ltac step := time arm8_step.
+  
+  intros. apply prove_invs.  
+  simpl. rewrite ENTRY. step.
+  repeat split; try exact R0; try exact R1; try exact R2; try lia.
+  
+  
+
+  
+
+  
+  
+  
+  

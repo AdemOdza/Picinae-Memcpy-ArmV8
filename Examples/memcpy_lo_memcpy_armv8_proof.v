@@ -269,6 +269,17 @@ Proof.
     rewrite N.recursion_succ; try reflexivity.
     intros i j H m1 m2 H'. subst. reflexivity.
 Qed.
+
+Lemma filled4:
+  ∀ m dest src k,
+    filled m dest src (k + 4) =
+    N.recursion (filled m dest src k)
+      (fun i m' => m'[Ⓑ dest + k + i := m Ⓑ[src + k + i]]) 4.
+Proof.
+  intros. 
+  apply (filled_add 4 m dest src k).
+Qed.
+	 
 Lemma filled16 :
   ∀ m dest src k,
     filled m dest src (k + 16) =

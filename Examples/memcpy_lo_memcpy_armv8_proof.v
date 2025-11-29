@@ -373,6 +373,16 @@ Proof.
   step. destruct Hendpoints as [HX4 HX5]. unfold endpoints_inv in *. cbn in *. repeat split.
   - native_compute. change (s1 R_X4 = src + len). exact HX4.
   - native_compute. change (s1 R_X5 = dest + len). exact HX5.
-  - 
-   
-   
+  - admit.
+  
+  - admit. (* First comparison: 0x10000c (1048588) *)
+  - admit. (* 16-byte path: 0x100020 (1048608) *)
+  - admit. (* 8-byte path: 0x100038 (1048632) *)
+  - admit. (* 4-byte path: 0x100054 (1048660) *)
+  - admit. (* 1-byte path: 0x100070 (1048688) *)
+  - admit. (* Medium path entry: 0x100090 (1048720) *)
+  - admit. (* Large path entry: 0x100100 (1048832) *)
+  - admit. 
+  - admit.
+  - admit.
+  - admit.

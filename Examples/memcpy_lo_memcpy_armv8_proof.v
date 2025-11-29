@@ -304,6 +304,30 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Lia.
 
+Print common_inv.
+Lemma inv_1byte_init :
+  forall dest src len s m,
+    len < 4 ->
+    common_inv  0 dest src len s m 0->
+    inv_1byte 0 dest src len s m.
+Proof.
+  intros. unfold inv_1byte. auto.
+Qed.
+
+(*Lemma checked_add_true:
+  ∀ n k len (KLEN: k <= len) (LEN32: len < 2^32) (BC: (n <=? len ⊖ k) = true),
+  k + n <= len.
+Proof.
+  intros.
+  rewrite N.add_comm. rewrite <- (N.sub_add _ _ KLEN). apply N.add_le_mono_r.
+  rewrite <- (N.mod_small _ _ LEN32). rewrite <- (N.mod_small k (2^32)).
+    rewrite <- msub_nowrap.
+      apply N.leb_le, BC.
+      rewrite (N.mod_small _ _ LEN32). etransitivity. apply mp2_mod_le. apply KLEN.
+    eapply N.le_lt_trans; eassumption.
+Qed.*)
+
+
 
 
 Theorem memcpy_functional_correctness :

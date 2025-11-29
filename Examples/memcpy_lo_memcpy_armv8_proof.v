@@ -77,6 +77,8 @@ Section Invariants.
         regs s m dest src len (dest + k) (src + k) (len - k)
         /\ k <= len
         /\ s R_X30 = raddr.
+Definition bounds_safe (dest src len : N) :=
+  dest + len < 2^64 /\ src + len < 2^64 /\ len < 2^64.
 
 (* Entry invariants *)
     Definition entry_inv (dest : N) (src : N) (len : N) (s : store) (m : memory) :=
@@ -84,8 +86,7 @@ Section Invariants.
         /\ s R_X1 = src
         /\ s R_X2 = len
         /\ s R_X30 = raddr
-        /\ dest + len < 2^64 
-        /\ src + len < 2^64.
+        /\ bounds_safe dest src len.
 
     (* Endpoint calculation invariant (after 0x100000-0x100004) *)
     Definition endpoints_inv (dest : N) (src : N) (len : N) (s : store) :=
@@ -282,6 +283,10 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Lia.
 
+Notation "0x x" := (N.of_nat x) (at level 0, format "0x x").
+
+(* Optional: helper to make Addr literals easier *)
+Notation "'ADDR' x" := (addr x) (at level 0).
 
 Theorem memcpy_functional_correctness :
   ∀ s dest src len mem t s' x'
@@ -290,7 +295,8 @@ Theorem memcpy_functional_correctness :
     (MEM: s V_MEM64 = mem)
     (R0: s R_X0 = dest)
     (R1: s R_X1 = src)
-    (R2: s R_X2 = len),
+    (R2: s R_X2 = len)
+    (BOUNDS : bounds_safe dest src len),
   satisfies_all memcpy_lo_memcpy_armv8
     (fun t0 => memcpy_invset mem (s R_X30) dest src len t0)
     program_exit
@@ -301,12 +307,24 @@ Proof.
   intros. apply prove_invs.  
   simpl. rewrite ENTRY. step.
   repeat split; try exact R0; try exact R1; try exact R2; try lia.
+  destruct BOUNDS as [Hdest Hsrc]. assumption.
+  destruct BOUNDS as [_ [Hsrc_bound Hlen]]. assumption. 
+  destruct BOUNDS as [_ [Hsrc_bound Hlen]]. assumption. 
   
+  intros.
+  erewrite startof_prefix in ENTRY; try eassumption.
+  assert (LEN := models_var R_X2 MDL). rewrite R2 in LEN. unfold arm8typctx in LEN.
+  eapply models_at_invariant; try eassumption.
+  apply memcpy_welltyped.  
+  intro Hinv.
   
+  clear - Hinv PRE LEN.
+  rename t1 into t. rename s1 into s1_rest. rename Hinv into Hinv_entry.
+  destruct_inv 32 PRE. 
+  (* entry invarient 0x100000  *)
+  destruct PRE as [H1 [H2 [H3 [H4 [H5 H6]]]]].
+  step. step. constructor. unfold endpoints_inv. unfold entry_inv.
+  constructor. cbn.  apply N.mod_small. lia. cbn. apply N.mod_small. lia. 
+  unfold entry_inv; cbn. repeat split; try reflexivity; try assumption. lia.
 
-  
-
-  
-  
-  
-  
+   

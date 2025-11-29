@@ -304,10 +304,7 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Lia.
 
-Notation "0x x" := (N.of_nat x) (at level 0, format "0x x").
 
-(* Optional: helper to make Addr literals easier *)
-Notation "'ADDR' x" := (addr x) (at level 0).
 
 Theorem memcpy_functional_correctness :
   ∀ s dest src len mem t s' x'
@@ -340,12 +337,18 @@ Proof.
   intro Hinv.
   
   clear - Hinv PRE LEN.
-  rename t1 into t. rename s1 into s1_rest. rename Hinv into Hinv_entry.
+  rename Hinv into Hinv_entry.
   destruct_inv 32 PRE. 
   (* entry invarient 0x100000  *)
   destruct PRE as [H1 [H2 [H3 [H4 [H5 H6]]]]].
   step. step. constructor. unfold endpoints_inv. unfold entry_inv.
   constructor. cbn.  apply N.mod_small. lia. cbn. apply N.mod_small. lia. 
   unfold entry_inv; cbn. repeat split; try reflexivity; try assumption. lia.
-
+  (* endpoints calculation 0x100008  *)
+  destruct PRE as [Hendpoints Hentry].
+  step. destruct Hendpoints as [HX4 HX5]. unfold endpoints_inv in *. cbn in *. repeat split.
+  - native_compute. change (s1 R_X4 = src + len). exact HX4.
+  - native_compute. change (s1 R_X5 = dest + len). exact HX5.
+  - 
+   
    

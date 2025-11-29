@@ -11,3 +11,12 @@ Picinae_armv7.v
 Picinae_riscv.v
 Picinae_amd64.v
 Picinae_armv8_pcode.v
+
+
+ 
+Examples/arm7_memset.v 
+Examples/arm7_strlen.v 
+Examples/arm8_strcasecmp.v 
+Examples/memcpy_lo_memcpy_armv8.v 
+
+

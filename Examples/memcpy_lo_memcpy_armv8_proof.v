@@ -279,7 +279,17 @@ Proof.
   intros. 
   apply (filled_add 4 m dest src k).
 Qed.
-	 
+
+Lemma filled8:
+  ∀ m dest src k,
+    filled m dest src (k + 8) =
+    N.recursion (filled m dest src k)
+      (fun i m' => m'[Ⓑ dest + k + i := m Ⓑ[src + k + i]]) 8.
+Proof.
+  intros. 
+  apply (filled_add 8 m dest src k).
+Qed.
+
 Lemma filled16 :
   ∀ m dest src k,
     filled m dest src (k + 16) =

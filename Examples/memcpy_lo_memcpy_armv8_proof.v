@@ -62,7 +62,10 @@ Section Invariants.
     k <= len /\
     memcpy_regs s k.
 
-  (* Optional alignment info for large copies *)
+  Definition bounds_safe (dest src len : N) :=
+    dest + len < 2^64 /\ src + len < 2^64 /\ len < 2^64.
+
+
   Definition align_inv (s : store) :=
     s R_X14 = dest mod 16 /\
     s R_X3 = dest - (dest mod 16).
@@ -82,14 +85,15 @@ Section Invariants.
     s V_MEM64 = filled mem dest src len.
 
   (* Trace-based invariant mapping *)
-  Definition memcpy_invset (t : trace) :=
-    match t with
-    | (Addr a, s) :: _ =>
-        if a =? 0x100000 then Some (entry_inv s)         (* entry *)
-        else if a =? 0x100188 then Some (postcondition s) (* exit *)
-        else Some (∃ k, memcpy_inv s k)                  (* during copy *)
-    | _ => None
-    end.
+ Definition memcpy_invset (t : trace) :=
+  match t with
+  | (Addr a, s) :: _ =>
+      if a =? 0x100000 then Some (entry_inv s)         (* entry *)
+      else if a =? 0x100130 then Some (∃ k, memcpy_inv s k)  (* 64 byte copy loop*)
+      else if a =? 0x100188 then Some (postcondition s) (* exit*)
+      else None  (* all other addresses return None *)
+  | _ => None
+  end.
     
 
 End Invariants.
@@ -205,7 +209,7 @@ Theorem memcpy_partial_correctness:
     (BOUNDS_DEST: dest + len < 2^64)
     (BOUNDS_SRC : src + len < 2^64),
     satisfies_all memcpy_lo_memcpy_armv8
-   (fun t0 => memcpy_invset mem (s R_X30) dest src len t0)
+    (fun t0 => memcpy_invset mem (s R_X30) dest src len t0)
     program_exit
     ((x', s')::t).
 Proof.
@@ -214,4 +218,30 @@ Proof.
   
   intros. apply prove_invs.
   
+  (* Base case: entry invariant *)
   simpl. rewrite ENTRY. step.
+  unfold entry_inv.
+  repeat split; try assumption.
+
+    
+  (* Inductive case *)
+  - intros.
+  erewrite startof_prefix in ENTRY; try eassumption.
+  assert (LEN64 := models_var R_X2 MDL). rewrite R2 in LEN64. unfold arm8typctx in LEN64.
+  eapply models_at_invariant; try eassumption. apply memcpy_welltyped. intro MDL1.
+  clear - PRE MDL1 LEN64 BOUNDS_DEST BOUNDS_SRC.
+  rename t1 into t. rename s1 into s1'. rename MDL1 into MDL.
+  
+  destruct_inv 32 PRE.
+
+
+
+
+
+
+
+
+
+Admitted.
+ 
+  

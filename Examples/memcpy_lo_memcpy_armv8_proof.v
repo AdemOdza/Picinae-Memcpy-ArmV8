@@ -48,7 +48,7 @@ Section Invariants.
     Variable len : N        (* memcpy: 2nd pointer arg (R_X2), byte count *).
 
 
-    
+  
   (* Registers state after copying k bytes *)
   Definition memcpy_regs (s : store) (k : N) :=
     s V_MEM64 = filled mem dest src len /\
@@ -70,33 +70,31 @@ Section Invariants.
     s R_X14 = dest mod 16 /\
     s R_X3 = dest - (dest mod 16).
 
-  (* Entry invariant *)
-  Definition entry_inv (s : store) :=
-    s R_X0 = dest /\
-    s R_X1 = src /\
-    s R_X2 = len /\
-    s R_X30 = raddr /\
-    dest + len < 2^64 /\
-    src + len < 2^64.
+
 
   (* Postcondition: all bytes copied correctly *)
   Definition postcondition (s : store) :=
     s R_X0 = dest /\
     s V_MEM64 = filled mem dest src len.
 
-  (* Trace-based invariant mapping *)
- Definition memcpy_invset (t : trace) :=
+Definition memcpy_invset (t : trace) :=
   match t with
   | (Addr a, s) :: _ =>
-      if a =? 0x100000 then Some (entry_inv s)         (* entry *)
-      else if a =? 0x100130 then Some (∃ k, memcpy_inv s k)  (* 64 byte copy loop*)
-      else if a =? 0x100188 then Some (postcondition s) (* exit*)
-      else None  (* all other addresses return None *)
+      if a =? 0x100000 then Some (s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X30 = raddr /\ dest + len < 2 ^ 64 /\ src + len < 2 ^ 64)
+
+      (* 16 byte copy *) else if a =? 0x100020 then Some (16 <= len /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X4 = src + len /\ s R_X5 = dest + len)
+
+      else if a =? 0x100130 then Some (exists k : N, k <= len /\ s V_MEM64 = filled mem dest src k /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len - k /\ s R_X30 = raddr)
+
+      else None
   | _ => None
   end.
-    
+
 
 End Invariants.
+    
+
+
 
 Lemma filled0: ∀ m p c, filled m p c 0 = m.
 Proof.
@@ -194,8 +192,7 @@ Proof.
       rewrite (N.mod_small _ _ LEN32). etransitivity. apply mp2_mod_le. apply KLEN.
     eapply N.le_lt_trans; eassumption.
 Qed.*)
-
-
+Require Import NArith.
 
 
 Theorem memcpy_partial_correctness:
@@ -220,7 +217,6 @@ Proof.
   
   (* Base case: entry invariant *)
   simpl. rewrite ENTRY. step.
-  unfold entry_inv.
   repeat split; try assumption.
 
     
@@ -233,13 +229,13 @@ Proof.
   rename t1 into t. rename s1 into s1'. rename MDL1 into MDL.
   
   destruct_inv 32 PRE.
-
-
-
-
-
-
-
+  destruct PRE as [R_X0 [R_X1 [R_X2 [R_X30 []]]]].
+  (* 16 byte copy *)
+  step. step. step. step. step. step. step. step.  
+  repeat split. apply N.leb_le. assumption. 
+  unfold "⊕". apply N.mod_small. exact H0.
+  unfold "⊕". apply N.mod_small. exact H.
+  
 
 
 Admitted.

@@ -81,9 +81,9 @@ Definition memcpy_invset (t : trace) :=
   match t with
   | (Addr a, s) :: _ =>
       if a =? 0x100000 then Some (s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X30 = raddr /\ dest + len < 2 ^ 64 /\ src + len < 2 ^ 64)
-
+(*
       (* 16 byte copy *) else if a =? 0x100020 then Some (16 <= len /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X4 = src + len /\ s R_X5 = dest + len) 
-      
+      (* Small byte copy *) else if a =? 1048628 then Some (∃ k, memcpy_inv s k) *)
       else if a =? 0x100130 then Some (exists k : N, k <= len /\ s V_MEM64 = filled mem dest src k /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len - k /\ s R_X30 = raddr)
 
       else None
@@ -229,16 +229,12 @@ Proof.
   rename t1 into t. rename s1 into s1'. rename MDL1 into MDL.
   
   destruct_inv 32 PRE.
-  destruct PRE as [R_X0 [R_X1 [R_X2 [R_X30 []]]]].
-  (* start --> 16 byte copy --> ~ --> ret  *)
-  step. step. step. step. step. step. step. step. 
-  
-  repeat split. apply N.leb_le. assumption. 
-  unfold "⊕". apply N.mod_small. exact H0.
-  unfold "⊕". apply N.mod_small. exact H. 
-  
-  (* small byte  --> 4 byte --> 1 byte: count = 0 --> ret 1048712*)
-  step. step. step. step. admit. 
+
+  (* start --> 16 byte copy --> ~ --> ret 1048624 *)
+  step. step. step. step. step. step. step. step. step. step. step. step. admit.
+
+  (* small byte  --> 4 byte --> 1 byte: count = 0 --> ret 1048712*) 
+  step. step. step. admit. 
 
   (* 1 byte: count ≠ 0 --> ~ -->  ret 1048712*)
   step. step. step. step. step. step. step. admit. 
@@ -252,23 +248,23 @@ Proof.
   (* Medium Copy (count <= 64) --> ~ --> ret 1048760 *)
   step. step. step. step. step. step. step. step. step. step. admit. 
   
-  (* Large copy: count > 96 --> *extra large copy --> ret 1048824 *)
-  step. step. step. step. step. step. step. step. (* * *) step. step. step. step. step. step. admit. 
+  (* Large copy: count > 96 --> ret 1048824 *)
+  step. step. step. step. step. step. step. step. step. step. step. step. step. step. admit. 
   
   (* Store 64-byte chunk in loop --> ~ --> ret 1048824 *)
   step. step. step. step. step. step. admit.
   
-  (* max size loop --> some proof (1048876)*)
+  (* max size loop --> postcondition proof? ret *)
   step. step. step. step. step. step. step. step. step. step. step. step. admit. 
   
-  (* Cleanup -> ret 1048964 (False ???) this takes too long*)
+  (* Cleanup -> ret 1048968 (Goal: False) this takes too long*)
   step. step. step. step. step. step. step. step. step. step. step. step. admit. 
   
-  (* 16 copy path --> ~ --> ret 1048624 *)
-  step. step. step. step. admit. 
+  (* 1048880 --> ~ --> ret ??? *)
+  step. step. step. step. step. step. step. step. step. step. step. step. step. step. step. step. step.  admit. 
   
   (* Loop body 64 bytes per iteration count = 0 so end loop and continue --> Cleanup --> ret 1048968 FALSE?? *)
-  step. step. step. step. step. step. step. step. step. step. step. step.
+  step. step. step. step. step. step. step. step. step. step. step. step. 
   step. step. step. step. step. step. step. step. step. step. admit. 
 
   admit. (* some proof *)

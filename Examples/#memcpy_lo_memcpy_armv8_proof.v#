@@ -72,8 +72,9 @@ Section Invariants.
 
 
 
-  (* Postcondition: all bytes copied correctly  *)
+  (* Postcondition: all bytes copied correctly (only memory matters) *)
     Definition postcondition (s : store) :=
+      (* only require the memory to contain the copied bytes; drop register/CPU state *)
       s R_X0 = dest /\
       s V_MEM64 = filled mem dest src len.
 
@@ -239,8 +240,9 @@ Proof.
 
   (* start --> 16 byte copy --> ~ --> ret 1048624 *)
   destruct PRE as [HX0 [HX1 [HX2 [HX30 [Hdest Hsrc]]]]].
-  step. step. step. step. step. step. step. step. step. step. step. step.
-  
+  step. step. step. step. step. step. step. step. step. step. step. step. 
+  eapply NIHere.
+    cbn [effinv memcpy_invset program_exit].
   split. auto.
 
      

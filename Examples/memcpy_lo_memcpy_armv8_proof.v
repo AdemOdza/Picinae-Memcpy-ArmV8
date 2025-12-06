@@ -80,7 +80,7 @@ Section Invariants.
 Definition memcpy_invset (t : trace) :=
   match t with
   | (Addr a, s) :: _ =>
-      if a =? 0x100000 then Some (s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X30 = raddr /\ dest + len < 2 ^ 64 /\ src + len < 2 ^ 64)
+      if a =? 0x100000 then Some (s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X30 = raddr /\ dest + len < 2 ^ 64 /\ src + len < 2 ^ 64 /\  s V_MEM64 = mem)
 (*
       (* 16 byte copy *) else if a =? 0x100020 then Some (16 <= len /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X4 = src + len /\ s R_X5 = dest + len) 
       (* Small byte copy *) else if a =? 1048628 then Some (∃ k, memcpy_inv s k) *)
@@ -305,7 +305,7 @@ Proof.
   destruct_inv 32 PRE.
 
   (* start --> 16 byte copy --> ~ --> ret 1048624 *)
-  destruct PRE as [HX0 [HX1 [HX2 [HX30 [Hdest Hsrc]]]]].
+  destruct PRE as [HX0 [HX1 [HX2 [HX30 [Hdest [Hsrc HMEM]]]]]].
 
   step. step. step. step. step. step. step. step. step. step. step. step.
   
@@ -399,8 +399,6 @@ vm_compute; discriminate.
    }
 
 rewrite <- (getbyte_mod_mem (filled mem dest src len) a 64).
-
-
    admit.
 }
 assert (H_L_canon: 
@@ -443,26 +441,32 @@ assert (H_L_canon:
 (* 2. Assert that the RHS is canonical *)
 assert (H_R_canon: 
   filled mem dest src len = (filled mem dest src len) mod memsize 64).
+ 
 {
   (* Use the filled_canonical lemma *)
-  apply filled_canonical.
-  
-  (* Need to prove mem < memsize 64 *)
-  (* Since mem = s V_MEM64 (from MEM hypothesis) *)
+apply filled_canonical.
+assert (MEM64_orig := models_var V_MEM64 MDL).
+unfold arm8typctx in MEM64_orig.
+rewrite HMEM in MEM64_orig.
+exact MEM64_orig.
 
-  
-  (* Use models_var to get the bound from the original models hypothesis *)
-  assert (MEM64_orig := models_var V_MEM64 MDL).
-  unfold arm8typctx in MEM64_orig.
-  (* Now MEM64_orig : s V_MEM64 < 2^(8*2^64) *)
-  admit.
 }
 
-(* 3. Use the assertions to rewrite the goal *)
+assert (H_setmem_eq: 
+  mem [Ⓠ dest := mem Ⓠ[ src ] ] [Ⓠ 8 + dest := mem Ⓠ[ 8 + src ] ] 
+      [Ⓠ dest ⊖ 16 + len := mem Ⓠ[ src ⊖ 16 + len ] ] 
+      [Ⓠ dest ⊖ 8 + len := mem Ⓠ[ src ⊖ 8 + len ] ] =
+  s1' V_MEM64 [Ⓠ dest := s1' V_MEM64 Ⓠ[ src ] ] [Ⓠ 8 + dest := s1' V_MEM64 Ⓠ[ 8 + src ] ] 
+              [Ⓠ dest ⊖ 16 + len := s1' V_MEM64 Ⓠ[ src ⊖ 16 + len ] ] 
+              [Ⓠ dest ⊖ 8 + len := s1' V_MEM64 Ⓠ[ src ⊖ 8 + len ] ]).
+{
+  repeat rewrite <- HMEM.
+  reflexivity.
+}
+
+rewrite H_setmem_eq.
 rewrite H_L_canon.
 rewrite H_R_canon.
-
-(* 4. Solve using the equality you already proved *)
 exact H_eq_mod.
 
   

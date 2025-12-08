@@ -83,7 +83,7 @@ Definition memcpy_invset' (t : trace) : option Prop :=
       | 0x100064 
       | 0x100048 
       | 0x100030 
-      | 0x1000b8 => Some (exists mem, memcpy_regs s len /\ s V_MEM64 = filled mem dest src len)
+      | 0x1000b8 => Some (exists mem, s V_MEM64 = filled mem dest src len)
 
       | _ => None
       end
@@ -227,7 +227,15 @@ Proof.
   step. step. step. step.
   
   rewrite filled0 in MEM'.
-  erewrite filled0. repeat eexists; psimpl; try (eassumption || reflexivity).
+  rewrite filled0. exists mem.
+  symmetry.
+  rewrite <- (N.sub_add 8 len) at 1.
+  rewrite filled8.
+  unfold setmem.
+  Search N.recursion.
+  Search filled.
+  admit.
+  unfold filled.
   
   
   

@@ -222,7 +222,11 @@ Proof.
   destruct_inv 64 PRE.
   erewrite startof_prefix in ENTRY; try eassumption. 
   destruct PRE as [MEM' [R0' [R1' R2']]].
-  repeat step. rewrite filled0 in MEM'. 
+  step. step. step. step.
+  step. step. step. step.
+  step. step. step. step.
+  
+  rewrite filled0 in MEM'.
   erewrite filled0. repeat eexists; psimpl; try (eassumption || reflexivity).
   
   

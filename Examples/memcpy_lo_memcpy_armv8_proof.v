@@ -28,14 +28,20 @@ Definition program_exit (t:trace) :=
   match t with
   | (Addr a, _) :: _ =>
       match a with
-      | 0x100188 => true   (* final ret instruction *)
+      | 0x100188 
+      | 0x1000f8 
+      | 0x100088 
+      | 0x100064 
+      | 0x100048 
+      | 0x100030 
+      | 0x1000b8 => true   (* ret instructions *)
       | _ => false
       end
   | _ => false
 end.
 
-      Definition filled m dest src len :=
-        N.recursion m (fun i m' => m'[Ⓑ dest + i := m Ⓑ[src + i]]) len.
+Definition filled m dest src len :=
+  N.recursion m (fun i m' => m'[Ⓑ dest + i := m Ⓑ[src + i]]) len.
   
 Section Invariants.
     
@@ -43,50 +49,84 @@ Section Invariants.
     Variable mem : memory    (* initial memory state *).
     Variable raddr : N       (* return address (R_X30) *).
 
-    Variable dest : N        (* memcpy: 1st pointer arg (R_X0), destination address *).
+    (* Variable dest : N        (* memcpy: 1st pointer arg (R_X0), destination address *).
     Variable src : N        (* memcpy: 2nd pointer arg (R_X1), source address *).
-    Variable len : N        (* memcpy: 2nd pointer arg (R_X2), byte count *).
-
-
+    Variable len : N        (* memcpy: 2nd pointer arg (R_X2), byte count *). *)
   
   (* Registers state after copying k bytes *)
-  Definition memcpy_regs (s : store) (k : N) :=
-    s V_MEM64 = filled mem dest src len /\
-    s R_X0 = dest /\
-    s R_X1 = src /\
-    s R_X2 = len - k /\
-    s R_X30 = raddr.
+  Definition memcpy_regs (s : store) src dest len k :=
+    s V_MEM64 = filled mem dest src k /\
+    s R_X0 = src /\
+    s R_X1 = dest /\
+    s R_X2 = (len - k).
 
   (* Loop invariant: k bytes copied so far *)
-  Definition memcpy_inv (s : store) (k : N) :=
+  Definition memcpy_inv (s : store) dest src len (k : N)  :=
     k <= len /\
-    memcpy_regs s k.
+    memcpy_regs s dest src len k.
 
   Definition bounds_safe (dest src len : N) :=
     dest + len < 2^64 /\ src + len < 2^64 /\ len < 2^64.
 
-
-  Definition align_inv (s : store) :=
+(* Remove?
+  Definition align_inv dest (s : store) :=
     s R_X14 = dest mod 16 /\
-    s R_X3 = dest - (dest mod 16).
-
-
-
+    s R_X3 = dest - (dest mod 16). *)
+(* 
   (* Postcondition: all bytes copied correctly *)
-  Definition postcondition (s : store) :=
+  Definition postcondition dest src len (s : store) :=
     s R_X0 = dest /\
-    s V_MEM64 = filled mem dest src len.
-
+    s V_MEM64 = filled mem dest src len. *)
+(* 
 Definition memcpy_invset (t : trace) :=
   match t with
   | (Addr a, s) :: _ =>
-      if a =? 0x100000 then Some (s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X30 = raddr /\ dest + len < 2 ^ 64 /\ src + len < 2 ^ 64)
+      if a =? 0x100000 then Some (
+        s R_X0 = dest /\ 
+        s R_X1 = src /\ 
+        s R_X2 = len /\ 
+        s R_X30 = raddr /\ 
+        dest + len < 2 ^ 64 /\ 
+        src + len < 2 ^ 64
+        )
 (*
       (* 16 byte copy *) else if a =? 0x100020 then Some (16 <= len /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len /\ s R_X4 = src + len /\ s R_X5 = dest + len) 
       (* Small byte copy *) else if a =? 1048628 then Some (∃ k, memcpy_inv s k) *)
-      else if a =? 0x100130 then Some (exists k : N, k <= len /\ s V_MEM64 = filled mem dest src k /\ s R_X0 = dest /\ s R_X1 = src /\ s R_X2 = len - k /\ s R_X30 = raddr)
+      else if a =? 0x100130 then Some (exists k : N,
+      k <= len /\
+      s V_MEM64 = filled mem dest src k /\
+      s R_X0 = dest /\
+      s R_X1 = src /\
+      s R_X2 = len - k /\
+      s R_X30 = raddr
+      )
 
       else None
+  | _ => None
+  end. *)
+
+Definition memcpy_invset' mem dest src len (k : N) (t : trace) : option Prop :=
+  match t with
+  | (Addr a, s) :: _ =>
+      match a with
+
+      (* Entry point *)
+      | 0x100000 => Some (memcpy_regs s dest src len 0)
+
+      (* Loop 1 (1-byte writes to word boundary) *)
+      | 0x100130 => Some (memcpy_regs s dest src len k /\ s V_MEM64 = filled mem dest src k)
+
+      (* post-condition: *)
+      | 0x100188 
+      | 0x1000f8 
+      | 0x100088 
+      | 0x100064 
+      | 0x100048 
+      | 0x100030 
+      | 0x1000b8 => Some (memcpy_regs s dest src len len /\ s V_MEM64 = filled mem dest src len)
+
+      | _ => None
+      end
   | _ => None
   end.
 
@@ -196,7 +236,7 @@ Require Import NArith.
 
 
 Theorem memcpy_partial_correctness:
-  forall s dest src len mem t s' x'
+  forall s dest src len mem t s' x' k
     (ENTRY: startof t (x', s') = (Addr 0x100000,s))
     (MDL: models arm8typctx s)
     (MEM: s V_MEM64 = mem)
@@ -204,9 +244,11 @@ Theorem memcpy_partial_correctness:
     (R1: s R_X1 = src)
     (R2: s R_X2 = len)
     (BOUNDS_DEST: dest + len < 2^64)
-    (BOUNDS_SRC : src + len < 2^64),
+    (BOUNDS_SRC : src + len < 2^64)
+    (DIST: (dest + len < src) \/ (src + len < dest))
+    (K_lim: 0 <= k <= len),
     satisfies_all memcpy_lo_memcpy_armv8
-    (fun t0 => memcpy_invset mem (s R_X30) dest src len t0)
+    (fun t0 => memcpy_invset' mem (s R_X0) dest src len k t0)
     program_exit
     ((x', s')::t).
 Proof.
@@ -214,60 +256,35 @@ Proof.
   Local Ltac step := time arm8_step.
   
   intros. apply prove_invs.
-  
   (* Base case: entry invariant *)
   simpl. rewrite ENTRY. step.
   repeat split; try assumption.
+  intros. destruct_inv 64 PRE.
+  erewrite startof_prefix in ENTRY; try eassumption. 
+  destruct PRE as [MEM' [R0' [R1' R2']]].
+  step. step. step. step. step. step. step.
+  step. step. step. step. step. rewrite filled0 in MEM'. 
+  erewrite filled0. repeat eexists; psimpl; try (eassumption || reflexivity).
+  
+  
+  
+assert (LEN64 := models_var R_X2 MDL). rewrite R2 in LEN64. unfold arm8typctx in LEN64.
+auto. psimpl.
 
-    
-  (* Inductive case *)
-  - intros.
-  erewrite startof_prefix in ENTRY; try eassumption.
-  assert (LEN64 := models_var R_X2 MDL). rewrite R2 in LEN64. unfold arm8typctx in LEN64.
+(* length = 0, exit point *)
+try eassumption. psimpl in K_lim.
+
+erewrite MEM. induction k as [|k'] using N.peano_ind; psimpl; try (eassumption || reflexivity).
+unfold filled. induction N.recursion using N.peano_ind.
+induction N.recursion eqn: Hr using N.peano_ind. reflexivity.
+(* Inductive case *)
+
+  
+  apply memcpy_welltyped. 
   eapply models_at_invariant; try eassumption. apply memcpy_welltyped. intro MDL1.
-  clear - PRE MDL1 LEN64 BOUNDS_DEST BOUNDS_SRC.
-  rename t1 into t. rename s1 into s1'. rename MDL1 into MDL.
+  clear - PRE MDL1 LEN64.
+ (* rename t1 into t.*) rename s1 into s1'. rename MDL1 into MDL.
   
-  destruct_inv 32 PRE.
-
-  (* start --> 16 byte copy --> ~ --> ret 1048624 *)
-  step. step. step. step. step. step. step. step. step. step. step. step. admit.
-
-  (* small byte  --> 4 byte --> 1 byte: count = 0 --> ret 1048712*) 
-  step. step. step. admit. 
-
-  (* 1 byte: count ≠ 0 --> ~ -->  ret 1048712*)
-  step. step. step. step. step. step. step. admit. 
-  
-  (* 4 byte --> ~ --> ret 1048676 *)
-  step. step. step. step. admit.  
-  
-  (* 8 byte --> ~ --> ret 1048648 *)
-  step. step. step. step. admit. 
-  
-  (* Medium Copy (count <= 64) --> ~ --> ret 1048760 *)
-  step. step. step. step. step. step. step. step. step. step. admit. 
-  
-  (* Large copy: count > 96 --> ret 1048824 *)
-  step. step. step. step. step. step. step. step. step. step. step. step. step. step. admit. 
-  
-  (* Store 64-byte chunk in loop --> ~ --> ret 1048824 *)
-  step. step. step. step. step. step. admit.
-  
-  (* max size loop --> postcondition proof? ret *)
-  step. step. step. step. step. step. step. step. step. step. step. step. admit. 
-  
-  (* Cleanup -> ret 1048968 (Goal: False) this takes too long*)
-  step. step. step. step. step. step. step. step. step. step. step. step. admit. 
-  
-  (* 1048880 --> ~ --> ret ??? *)
-  step. step. step. step. step. step. step. step. step. step. step. step. step. step. step. step. step.  admit. 
-  
-  (* Loop body 64 bytes per iteration count = 0 so end loop and continue --> Cleanup --> ret 1048968 FALSE?? *)
-  step. step. step. step. step. step. step. step. step. step. step. step. 
-  step. step. step. step. step. step. step. step. step. step. admit. 
-
-  admit. (* some proof *)
 Admitted.
  
   

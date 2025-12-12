@@ -74,7 +74,7 @@ Definition memcpy_invset' (t : trace) : option Prop :=
       | 0x100000 => Some (memcpy_regs s 0)
 
       (* Loop 1 (1-byte writes to word boundary) *)
-      | 0x100130 => Some (exists mem k, memcpy_regs s k /\ s V_MEM64 = filled mem dest src k)
+      | 0x100130 => Some (exists mem k, s V_MEM64 = filled mem dest src k)
 
       (* post-condition: *)
       | 0x100188 
@@ -226,22 +226,29 @@ Proof.
   step. step. step. step.
   step. step. step. step.
   
-  rewrite filled0 in MEM'.
-  rewrite filled0. exists mem.
-  symmetry.
-  rewrite <- (N.sub_add 8 len) at 1.
-  rewrite filled8.
-  unfold setmem.
-  Search N.recursion.
-  Search filled.
+  - rewrite filled0 in MEM'.
+  rewrite filled0. exists mem. symmetry. rewrite <- (N.sub_add 8 len) at 1.
+  rewrite filled8. admit.
+  (*solve for length being greater than 8*)
+  apply N.leb_le in BC1. lia.
+  - step. step. step. apply N.eqb_eq in BC4. exists mem. rewrite BC4. exact MEM'.
+  step. step. step. step. step. step. step. admit.
+  step. step. step. step. admit. 
+  step. step. step. step. admit.
+  
+  - step. step. step. step. step. step. step. step. step. step.  admit.
+  step. step. step. step. step. step. step. step. step. step. step. step.
+  step. step. admit.
+  step. step. step. step. step. step. admit.
+  
+  - step. step. step. step. step. step. step. step. step. step. step. step. admit.
+  step. step. step. step. step. step. step. step. step. step. step. step. admit.
+  
+  - step. step. step. step. step. step. step. step. step. step. step. step. step. step. step.
+  step. step. step. step. step. step. step. admit.
   admit.
-  unfold filled.
-  
-  
-  
-  assert (LEN64 := models_var R_X2 MDL). rewrite R2 in LEN64. unfold arm8typctx in LEN64.
-  auto. psimpl.
-  
+ 
+   
 Admitted.
  
   

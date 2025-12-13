@@ -638,7 +638,46 @@ Proof.
   exists mem. rewrite filled0.
   symmetry.
   apply filled_overlap_4bytes.
-  admit.
+  (*len >= 4*)
+  split.
+  apply N.leb_gt in BC1. apply N.eqb_neq in BC3.
+  rewrite N.shiftr_div_pow2 in BC3.
+  assert (2^2 = 4) as Hpow by reflexivity. rewrite Hpow in BC3. 
+  assert (len / 4 <> 0) by (intro; rewrite H in BC3; compute in BC3; congruence).
+  (*proving base length*)
+  assert (len / 4 >= 1) as Hdiv4_ge1.
+    { destruct (len / 4) eqn:E. contradiction. lia. }
+  assert (4 * (len / 4) <= len) as Hmul. { apply N.mul_div_le. lia. }
+  assert (4 * 1 <= 4 * (len / 4)) by lia.
+  lia.
+  (*len < 8*)
+  apply N.leb_gt in BC1.
+  apply N.eqb_eq in BC2.
+  rewrite N.shiftr_div_pow2 in BC2 by reflexivity.
+  assert (2^3 = 8) as Hpow8 by reflexivity.
+  rewrite Hpow8 in BC2.
+  (*len < 8*)
+  assert (len / 8 <= 1) as Hdiv8_le1.
+  {
+    destruct (len / 8) eqn:Ediv.
+    - lia.
+    - destruct p.
+      + assert (N.pos (xI p) >= 3) by lia.
+        assert (8 * (len / 8) <= len) by (apply N.mul_div_le; lia).
+        rewrite Ediv in H0.
+        lia.
+      + assert (N.pos (xO p) >= 2) by lia.
+        assert (8 * (len / 8) <= len) by (apply N.mul_div_le; lia).
+        rewrite Ediv in H0.
+        lia.
+      + lia.
+  }
+  destruct (len / 8) eqn:Hdiv8.
+  apply N.div_small_iff in Hdiv8; lia.
+  assert (N.pos p = 1) by lia.
+  rewrite H in BC2.
+  simpl in BC2.
+  discriminate.
   
   step. step. step. step. 
   exists mem.

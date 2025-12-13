@@ -162,7 +162,34 @@ Proof.
   intros. apply (filled_add 16 m dest src k).
 Qed.
 
+Lemma filled3:
+  ∀ m dest src,
+    filled m dest src 3 =
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + 1 := m Ⓑ[src + 1]][Ⓑ dest + 2 := m Ⓑ[src + 2]].
+Proof.
+  intros.
+  replace 3 with (0 + 3) by reflexivity.
+  rewrite (filled_add 3 m dest src 0).
+  rewrite filled0.
+  unfold N.recursion.
+  simpl.
+  repeat rewrite N.add_0_l.
+  repeat rewrite N.add_0_r.
+  reflexivity.
+Qed.
 
+Lemma filled3_pattern:
+  ∀ m dest src len,
+    len = 3 ->
+    filled m dest src len =
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + (len >> 1) := m Ⓑ[src + (len >> 1)]][Ⓑ dest ⊖ 1 + len := m Ⓑ[src ⊖ 1 + len]].
+Proof.
+  intros m dest src len Hlen.
+  subst len.
+  rewrite filled3.
+  psimpl.
+  reflexivity.
+Qed.
 Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Lia.
@@ -232,8 +259,11 @@ Proof.
   (*solve for length being greater than 8*)
   apply N.leb_le in BC1. lia.
   - step. step. step. apply N.eqb_eq in BC4. exists mem. rewrite BC4. exact MEM'.
-  step. step. step. step. step. step. step. admit.
-  step. step. step. step. admit. 
+  step. step. step. step. step. step. step. 
+  exists mem. symmetry.
+  assert (len = 3) as Hlen by admit.
+  rewrite filled3_pattern by exact Hlen.
+  reflexivity.
   step. step. step. step. admit.
   
   - step. step. step. step. step. step. step. step. step. step.  admit.

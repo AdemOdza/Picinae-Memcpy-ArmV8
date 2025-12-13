@@ -465,8 +465,99 @@ Proof.
   
   (* Apply lemma to show overlapping qwords cover the remaining bytes *)
   erewrite qwords_subsume_bytes_tail_32 by lia.
+  psimpl.
+  reflexivity.
+Qed.
+
+Lemma filled_64_to_8qwords:
+  ∀ m dest src,
+    filled m dest src 64 =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ 16 + dest := m Ⓠ[16 + src]]
+     [Ⓠ 24 + dest := m Ⓠ[24 + src]]
+     [Ⓠ 32 + dest := m Ⓠ[32 + src]]
+     [Ⓠ 40 + dest := m Ⓠ[40 + src]]
+     [Ⓠ 48 + dest := m Ⓠ[48 + src]]
+     [Ⓠ 56 + dest := m Ⓠ[56 + src]].
+Proof.
+  intros.
+  replace 64 with (0 + 64) by reflexivity.
+  rewrite (filled_add 64 m dest src 0).
+  rewrite filled0.
+  unfold N.recursion. simpl.
+  repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+  (* Convert 64 consecutive byte writes to 8 qword writes *)
+  admit.
+Admitted.
+
+Lemma qwords_subsume_bytes_tail_64: ∀ m dest src n,
+  0 < n < 64 →
+  N.recursion (m [Ⓠ dest := m Ⓠ[ src ]]
+                  [Ⓠ 8 + dest := m Ⓠ[ 8 + src ]]
+                  [Ⓠ 16 + dest := m Ⓠ[ 16 + src ]]
+                  [Ⓠ 24 + dest := m Ⓠ[ 24 + src ]]
+                  [Ⓠ 32 + dest := m Ⓠ[ 32 + src ]]
+                  [Ⓠ 40 + dest := m Ⓠ[ 40 + src ]]
+                  [Ⓠ 48 + dest := m Ⓠ[ 48 + src ]]
+                  [Ⓠ 56 + dest := m Ⓠ[ 56 + src ]])
+    (fun i m' => m' [Ⓑ dest + 64 + i := m Ⓑ[ src + 64 + i ]]) n =
+  m [Ⓠ dest ⊖ 64 + (64 + n) := m Ⓠ[ src ⊖ 64 + (64 + n) ]]
+    [Ⓠ dest ⊖ 56 + (64 + n) := m Ⓠ[ src ⊖ 56 + (64 + n) ]]
+    [Ⓠ dest ⊖ 48 + (64 + n) := m Ⓠ[ src ⊖ 48 + (64 + n) ]]
+    [Ⓠ dest ⊖ 40 + (64 + n) := m Ⓠ[ src ⊖ 40 + (64 + n) ]]
+    [Ⓠ dest := m Ⓠ[ src ]]
+    [Ⓠ 8 + dest := m Ⓠ[ 8 + src ]]
+    [Ⓠ 16 + dest := m Ⓠ[ 16 + src ]]
+    [Ⓠ 24 + dest := m Ⓠ[ 24 + src ]]
+    [Ⓠ 32 + dest := m Ⓠ[ 32 + src ]]
+    [Ⓠ 40 + dest := m Ⓠ[ 40 + src ]]
+    [Ⓠ 48 + dest := m Ⓠ[ 48 + src ]]
+    [Ⓠ 56 + dest := m Ⓠ[ 56 + src ]]
+    [Ⓠ dest ⊖ 32 + (64 + n) := m Ⓠ[ src ⊖ 32 + (64 + n) ]]
+    [Ⓠ dest ⊖ 24 + (64 + n) := m Ⓠ[ src ⊖ 24 + (64 + n) ]]
+    [Ⓠ dest ⊖ 16 + (64 + n) := m Ⓠ[ src ⊖ 16 + (64 + n) ]]
+    [Ⓠ dest ⊖ 8 + (64 + n) := m Ⓠ[ src ⊖ 8 + (64 + n) ]].
+Proof.
+  (* The remaining n bytes after the first 64 are covered by 8 overlapping qword writes:
+     4 from the very end, 8 in the middle, and 4 more overlapping from end *)
+  admit.
+Admitted.
+
+Lemma filled_overlap_64bytes:
+  ∀ m dest src len,
+    64 < len < 128 ->
+    filled m dest src len =
+    m[Ⓠ dest ⊖ 64 + len := m Ⓠ[src ⊖ 64 + len]]
+     [Ⓠ dest ⊖ 56 + len := m Ⓠ[src ⊖ 56 + len]]
+     [Ⓠ dest ⊖ 48 + len := m Ⓠ[src ⊖ 48 + len]]
+     [Ⓠ dest ⊖ 40 + len := m Ⓠ[src ⊖ 40 + len]]
+     [Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ 16 + dest := m Ⓠ[16 + src]]
+     [Ⓠ 24 + dest := m Ⓠ[24 + src]]
+     [Ⓠ 32 + dest := m Ⓠ[32 + src]]
+     [Ⓠ 40 + dest := m Ⓠ[40 + src]]
+     [Ⓠ 48 + dest := m Ⓠ[48 + src]]
+     [Ⓠ 56 + dest := m Ⓠ[56 + src]]
+     [Ⓠ dest ⊖ 32 + len := m Ⓠ[src ⊖ 32 + len]]
+     [Ⓠ dest ⊖ 24 + len := m Ⓠ[src ⊖ 24 + len]]
+     [Ⓠ dest ⊖ 16 + len := m Ⓠ[src ⊖ 16 + len]]
+     [Ⓠ dest ⊖ 8 + len := m Ⓠ[src ⊖ 8 + len]].
+Proof.
+  intros m dest src len Hlen.
+  assert (exists n, len = 64 + n /\ 0 < n < 64) as [n [Hlen_eq Hn]].
+  { exists (len - 64). split; lia. }
+  rewrite Hlen_eq.
   
-  (* Simplify the expressions *)
+  (* Use filled_add to split into first 64 bytes and remaining n bytes *)
+  erewrite filled_add.
+  
+  (* Convert first 64 bytes to 8 qwords *)
+  rewrite filled_64_to_8qwords.
+  
+  (* Apply lemma to show overlapping qwords cover the remaining bytes *)
+  erewrite qwords_subsume_bytes_tail_64 by lia.
   psimpl.
   reflexivity.
 Qed.
@@ -597,12 +688,29 @@ Proof.
       -- simpl in BC1. discriminate BC1.
     * apply N.leb_gt in H64. assumption.
   + step. step. step. step. step. step. step. step. step. step. step. step. step. step.
-  (* 64 byte copy? *)
-    exists mem.
+  (* 64+ byte copy *)
+  exists mem.
   rewrite filled0.
   symmetry.
-   admit.
-  step. step. step. step. step. step. admit.
+  apply filled_overlap_64bytes.
+  split.
+  * (* Prove 64 < len *)
+    destruct (64 <=? len) eqn:H64 in BC1.
+    -- apply N.leb_le in H64.
+       destruct (len =? 64) eqn:H64eq in BC1.
+       ++ apply N.eqb_eq in H64eq. subst len.
+          simpl in BC1. discriminate BC1.
+       ++ apply N.eqb_neq in H64eq. lia.
+    -- simpl in BC1. discriminate BC1.
+  * (* Prove len < 128 help*)
+    admit.
+    
+  * step. step. step. step. step. step. 
+  (* 64 < len < 96 *)
+  exists mem.
+  rewrite filled0.
+  symmetry.
+  admit.
   
   - step. step. step. step. step. step. step. step. step. step. step. step. admit.
   step. step. step. step. step. step. step. step. step. step. step. step. admit.

@@ -49,6 +49,9 @@
 % Document %
 %%%%%%%%%%%%
 
+
+
+
 \begin{document}
     \maketitle
 
@@ -59,6 +62,95 @@
     \pagenumbering{arabic}
 
     \chapter{Introduction}
+    Our group worked on partially proving the correctness of the $memcpy$ function in the MUSL library. 
+    The $memcpy$ function copies a number of bytes from one section of memory to another. 
+    % All code pulled from here: https://git.musl-libc.org/cgit/musl/tree/src/string/memcpy.c%
+    \begin{figure}[hbtp]
+        \lstset{
+        numbers=left, 
+        firstnumber=1,
+        numberfirstline=true
+        }
+        \caption{The $memcpy$ function header}
+        \label{code.1}
+        \begin{lstlisting}[language=c,frame=single]
+            #include <string.h>
+            #include <stdint.h>
+            #include <endian.h>
+
+            void *memcpy(void *restrict dest, const void *restrict src, size_t n)
+            {
+                unsigned char *d = dest;
+                const unsigned char *s = src;
+
+            #ifdef __GNUC__
+
+            #if __BYTE_ORDER == __LITTLE_ENDIAN
+            #define LS >>
+            #define RS <<
+            #else
+            #define LS <<
+            #define RS >>
+            #endif
+
+                typedef uint32_t __attribute__((__may_alias__)) u32;
+                uint32_t w, x;
+
+                for (; (uintptr_t)s % 4 && n; n--) *d++ = *s++;
+            ...
+        \end{lstlisting}
+    \end{figure}
+
+    In figure $1.1$, we see the header of the $memcpy$ function. Three parameters are required: 
+    the $dest$ pointer where the data will be copied to, 
+    the $src$ pointer where the data will be copied from, 
+    and the $size\_t$ $n$ which will contain the amount of bytes to copy. 
+    Some preprocessor directives are also used to define the bit shift operators depending on the endianess of the system. 
+    Line $23$ handles the case where the pointer is misaligned from the word boundary. 
+    It copies byte-by-byte until the source pointer is aligned with the word boundary.
+
+
+
+    % n between 16 and 32 %
+        \begin{figure}[hbtp]
+        \lstset{
+        numbers=left, 
+        firstnumber=25,
+        numberfirstline=true
+        }
+        \caption{Copying 16 to 32 bytes}
+        \label{code.1}
+        \begin{lstlisting}[language=c,frame=single]
+        if ((uintptr_t)d % 4 == 0) {
+            for (; n>=16; s+=16, d+=16, n-=16) {
+                *(u32 *)(d+0) = *(u32 *)(s+0);
+                *(u32 *)(d+4) = *(u32 *)(s+4);
+                *(u32 *)(d+8) = *(u32 *)(s+8);
+                *(u32 *)(d+12) = *(u32 *)(s+12);
+            }
+            if (n&8) {
+                *(u32 *)(d+0) = *(u32 *)(s+0);
+                *(u32 *)(d+4) = *(u32 *)(s+4);
+                d += 8; s += 8;
+            }
+            if (n&4) {
+                *(u32 *)(d+0) = *(u32 *)(s+0);
+                d += 4; s += 4;
+            }
+            if (n&2) {
+                *d++ = *s++; *d++ = *s++;
+            }
+            if (n&1) {
+                *d = *s;
+            }
+            return dest;
+        }
+            ...
+        \end{lstlisting}
+    \end{figure}
+    The segment of code shown in figure $1.2$ handles the copying of bytes when $n >= 16$. 
+    $16$ byte chunks are copied over until we have less than $16$ to copy. At that point, the remaining if statements copy the leftover bytes.
+
 
 
     \clearpage
@@ -147,6 +239,7 @@
     Our team consists of 5 people: 
     \begin{itemize}
         \item Adem Odza 
+        \item \subitem Created presentation slides, gave presentation, 
         \item Avery Arnold
         \item Dagmawet Zemedkun
         \item Omar Khan

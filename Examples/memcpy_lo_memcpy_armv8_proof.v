@@ -389,19 +389,27 @@ Proof.
   apply N.leb_le in BC1. lia.
   - step. step. step. apply N.eqb_eq in BC4. exists mem. rewrite BC4. exact MEM'.
   step. step. step. step. step. step. step. 
+  (* size < 4 byte copy *)
   exists mem. symmetry.
   assert (len = 3) as Hlen by admit.
   rewrite filled3_pattern by exact Hlen.
   reflexivity.
   
   step. step. step. step. 
+  (* 4-8 byte copy *)
   exists mem. rewrite filled0.
   symmetry.
   apply filled_overlap_4bytes.
   admit.
   
-  - step. step. step. step. step. step. step. step. step. step.  admit.
-  step. step. step. step. step. step. step. step. step. step. step. step.
+  step. step. step. step. 
+  (* 8-16 byte copy *)
+  
+  admit.
+  - step. step. step. step. step. step. step. step. step. step.
+  (* 32 byte copy *)
+  
+  admit.
   step. step. admit.
   step. step. step. step. step. step. admit.
   

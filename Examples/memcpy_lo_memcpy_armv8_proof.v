@@ -267,6 +267,83 @@ Proof.
      The overlapping byte at dest+3 is overwritten by the second dword. *)
 Admitted.
 
+Lemma filled_8_to_qword:
+  ∀ m dest src,
+    m[Ⓑ dest := m Ⓑ[src]] [Ⓑ dest + 1 := m Ⓑ[src + 1]]
+     [Ⓑ dest + 2 := m Ⓑ[src + 2]] [Ⓑ dest + 3 := m Ⓑ[src + 3]]
+     [Ⓑ dest + 4 := m Ⓑ[src + 4]] [Ⓑ dest + 5 := m Ⓑ[src + 5]]
+     [Ⓑ dest + 6 := m Ⓑ[src + 6]] [Ⓑ dest + 7 := m Ⓑ[src + 7]] =
+    m[Ⓠ dest := m Ⓠ[src]].
+Proof.
+  intros.
+  (*combine consecutive byte writes into a quadword *)
+  rewrite (setmem_merge 64 LittleE 1 1).
+  rewrite (setmem_merge 64 LittleE 2 1).
+  rewrite (setmem_merge 64 LittleE 3 1).
+  rewrite (setmem_merge 64 LittleE 4 1).
+  rewrite (setmem_merge 64 LittleE 5 1).
+  rewrite (setmem_merge 64 LittleE 6 1).
+  rewrite (setmem_merge 64 LittleE 7 1).
+  f_equal.
+(* 8 bytes is equivalent to one quad:
+unfold Ⓠ to its getmem definition, and then unfold that, but its opaque?*)
+
+Admitted.
+
+Lemma qword_subsumes_bytes_tail: ∀ m dest src n,
+  n < 8 →
+  N.recursion (m [Ⓠ dest := m Ⓠ[ src ]])
+    (fun i m' => m' [Ⓑ dest + 8 + i := m Ⓑ[ src + 8 + i ]]) n =
+  m [Ⓠ dest := m Ⓠ[ src ]] [Ⓠ dest + n := m Ⓠ[ src + n ]].
+Proof.
+  (*qword(8bytes) at dest plus n bytes after it is the same as qword at dest 
+   and qword at dest+n. In other words, overlapping copy works  *)
+  admit.
+Admitted.
+
+Lemma filled_overlap_8bytes:
+  ∀ m dest src len,
+    8 <= len < 16 ->
+    filled m dest src len =
+    let base := filled m dest src 0 in
+    base
+    [Ⓠ dest := base Ⓠ[ src ]]
+    [Ⓠ dest ⊖ 8 + len := base Ⓠ[ src ⊖ 8 + len ]].
+Proof.
+   intros m dest src len Hlen.
+  assert (exists n, len = 8 + n /\ n < 8) as [n [Hlen_eq Hn]].
+  { exists (len - 8). split; lia. }
+  rewrite Hlen_eq.
+  
+  (* filled_add wants: filled m dest src (k + n) where k=8, n=n *)
+  (* So we need the form (8 + n), which we already have *)
+  erewrite filled_add.
+  
+  (* Convert first 8 bytes to qword *)
+  assert (filled m dest src 8 = m[Ⓠ dest := m Ⓠ[src]]) as H8.
+  {
+    replace 8 with (0 + 8) by reflexivity.
+    rewrite (filled_add 8 m dest src 0).
+    rewrite filled0.
+    unfold N.recursion. simpl.
+    repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+    apply filled_8_to_qword.
+  }
+  rewrite H8. 
+   (* Case analysis on n immediately to simplify the complex match *)
+  assert (n = 0 \/ n = 1 \/ n = 2 \/ n = 3 \/ n = 4 \/ n = 5 \/ n = 6 \/ n = 7) as Hcases by lia.
+  destruct Hcases as [H0|[H1|[H2|[H3|[H4|[H5|[H6|H7]]]]]]]; subst n.
+  
+  - simpl. unfold N.recursion. simpl. psimpl. reflexivity.  
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+  - erewrite qword_subsumes_bytes_tail by lia. simpl. psimpl. reflexivity.
+Qed.
+    
 
 Lemma filled_overlap_4bytes:
   ∀ m dest src len,
@@ -403,9 +480,28 @@ Proof.
   admit.
   
   step. step. step. step. 
+  exists mem.
+  rewrite filled0 in MEM'.
+  rewrite filled0.
+  symmetry.
+  apply filled_overlap_8bytes.
+  split.
+  (*prove that lenth is >= 8*)
+  -- apply N.leb_gt in BC1. apply N.eqb_neq in BC2.
+  rewrite N.shiftr_div_pow2 in BC2.
+  (* 2^3 is 8 *)
+  assert (2^3 = 8) as Hpow by reflexivity. rewrite Hpow in BC2. 
+  assert (len / 8 <> 0) by (intro; rewrite H in BC2; compute in BC2; congruence).
+  assert (len / 8 < 2) by (apply N.div_lt_upper_bound; lia).
+  assert (0 < len / 8). { apply N.neq_0_lt_0; lia. }
+  assert (len / 8 = 1) by lia.
+  assert (8 * (len / 8) <= len) by (apply N.mul_div_le; lia). lia.
+  (*prove that length is less than 16-easier just braching conditions*)
+  -- apply N.leb_gt in BC1.
+  assumption.
+  
   (* 8-16 byte copy *)
   
-  admit.
   - step. step. step. step. step. step. step. step. step. step.
   (* 32 byte copy *)
   

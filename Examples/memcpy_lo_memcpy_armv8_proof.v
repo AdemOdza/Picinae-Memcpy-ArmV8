@@ -469,6 +469,98 @@ Proof.
   reflexivity.
 Qed.
 
+
+Lemma qword_subsumes_bytes_tail_16: ∀ m dest src n,
+  n < 16 →
+  N.recursion (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]])
+    (fun i m' => m'[Ⓑ dest + 16 + i := m Ⓑ[src + 16 + i]]) n =
+  m[Ⓠ dest := m Ⓠ[src]]
+   [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+   [Ⓠ dest ⊖ 16 + (16 + n) := m Ⓠ[src ⊖ 16 + (16 + n)]]
+   [Ⓠ dest ⊖ 8 + (16 + n) := m Ⓠ[src ⊖ 8 + (16 + n)]].
+Proof.
+ admit.
+ (*The remaining n bytes  at positions 16 -> 16+n-1 can be covered by 2 overlapping qword writes*)
+ Admitted.
+ 
+Lemma filled_16_to_2qwords:
+  ∀ m dest src,
+    filled m dest src 16 =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]].
+Proof.
+  intros.
+  (* Use filled_add to split*)
+  replace 16 with (8 + 8) by reflexivity. rewrite (filled_add 8 m dest src 8).
+  
+  (* Convert first 8 bytes to qword *)
+  assert (filled m dest src 8 = m[Ⓠ dest := m Ⓠ[src]]) as H_first_8.
+  {
+    replace 8 with (0 + 8) at 1 by reflexivity. rewrite (filled_add 8 m dest src 0).
+    rewrite filled0. unfold N.recursion. simpl. repeat rewrite N.add_0_l. repeat rewrite N.add_0_r. apply filled_8_to_qword.
+  }
+  rewrite H_first_8. clear H_first_8. remember (m[Ⓠ dest := m Ⓠ[src]]) as m'.
+  (* Expand the recursion*)
+  unfold N.recursion at 1. simpl. repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+  replace (dest + 8) with (8 + dest) by lia. replace (dest + 8 + 1) with (9 + dest) by lia.
+  replace (dest + 8 + 2) with (10 + dest) by lia. replace (dest + 8 + 3) with (11 + dest) by lia.
+  replace (dest + 8 + 4) with (12 + dest) by lia. replace (dest + 8 + 5) with (13 + dest) by lia. 
+  replace (dest + 8 + 6) with (14 + dest) by lia. replace (dest + 8 + 7) with (15 + dest) by lia.
+  
+  replace (src + 8) with (8 + src) by lia. replace (src + 8 + 1) with (9 + src) by lia.
+  replace (src + 8 + 2) with (10 + src) by lia. replace (src + 8 + 3) with (11 + src) by lia.
+  replace (src + 8 + 4) with (12 + src) by lia. replace (src + 8 + 5) with (13 + src) by lia.
+  replace (src + 8 + 6) with (14 + src) by lia. replace (src + 8 + 7) with (15 + src) by lia.
+  (*set merge pattern *)
+  replace (9 + dest) with ((8 + dest) + 1) by lia. replace (10 + dest) with ((8 + dest) + 2) by lia.
+  replace (11 + dest) with ((8 + dest) + 3) by lia. replace (12 + dest) with ((8 + dest) + 4) by lia.
+  replace (13 + dest) with ((8 + dest) + 5) by lia. replace (14 + dest) with ((8 + dest) + 6) by lia.
+  replace (15 + dest) with ((8 + dest) + 7) by lia. replace (9 + src) with ((8 + src) + 1) by lia.
+  replace (10 + src) with ((8 + src) + 2) by lia. replace (11 + src) with ((8 + src) + 3) by lia.
+  replace (12 + src) with ((8 + src) + 4) by lia. replace (13 + src) with ((8 + src) + 5) by lia.
+  replace (14 + src) with ((8 + src) + 6) by lia. replace (15 + src) with ((8 + src) + 7) by lia.
+  
+  (* Apply setmem_merge *)
+  rewrite (setmem_merge 64 LittleE 1 1).
+  rewrite (setmem_merge 64 LittleE 2 1).
+  rewrite (setmem_merge 64 LittleE 3 1).
+  rewrite (setmem_merge 64 LittleE 4 1).
+  rewrite (setmem_merge 64 LittleE 5 1).
+  rewrite (setmem_merge 64 LittleE 6 1).
+  rewrite (setmem_merge 64 LittleE 7 1).
+  f_equal;admit.
+  (*first goal: dest + 8 = dest +8 at a binary level.
+    second goal: getmem equality of bytes and quad-> cant unfold getmem opaque*)
+Admitted.
+
+Lemma filled_overlap_16to31bytes:
+  ∀ m dest src len,
+    16 <= len < 32 ->
+    filled m dest src len =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ dest ⊖ 16 + len := m Ⓠ[src ⊖ 16 + len]]
+     [Ⓠ dest ⊖ 8 + len := m Ⓠ[src ⊖ 8 + len]].
+Proof.
+  intros m dest src len [Hge Hlt].
+  assert (exists n, len = 16 + n /\ n < 16) as [n [Hlen_eq Hn]].
+  { exists (len - 16). split; lia. }
+  rewrite Hlen_eq.
+  
+  (* Use filled_add to split into first 16 bytes and remaining n bytes *)
+  erewrite filled_add.
+  
+  (* Convert first 16 bytes to 2 qwords using our lemma *)
+  rewrite filled_16_to_2qwords.
+  
+  (* Apply lemma to show overlapping qwords cover the remaining bytes *)
+  erewrite qword_subsumes_bytes_tail_16 by lia.
+  
+  (* Simplify the expressions *)
+  psimpl.
+  reflexivity.
+Qed.
+
 Lemma filled_64_to_8qwords:
   ∀ m dest src,
     filled m dest src 64 =
@@ -621,10 +713,14 @@ Proof.
   step. step. step. step.
   
   - rewrite filled0 in MEM'.
-  rewrite filled0. exists mem. symmetry. rewrite <- (N.sub_add 8 len) at 1.
-  rewrite filled8. admit.
-  (*solve for length being greater than 8*)
-  apply N.leb_le in BC1. lia.
+  rewrite filled0. exists mem. symmetry. apply filled_overlap_16to31bytes.
+  split.
+    -- (*16 <= len *)
+      apply N.leb_le in BC1. 
+      exact BC1.
+    -- (*len < 32*) admit.
+
+
   - step. step. step. apply N.eqb_eq in BC4. exists mem. rewrite BC4. exact MEM'.
   step. step. step. step. step. step. step. 
   (* size < 4 byte copy *)

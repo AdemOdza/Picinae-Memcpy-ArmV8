@@ -400,6 +400,76 @@ Proof.
     repeat rewrite (N.add_comm _ src).
     apply filled_7_to_dword.
   Qed.
+  
+Lemma filled_32_to_4qwords:
+  ∀ m dest src,
+    filled m dest src 32 =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ 16 + dest := m Ⓠ[16 + src]]
+     [Ⓠ 24 + dest := m Ⓠ[24 + src]].
+Proof.
+  intros.
+  replace 32 with (0 + 32) by reflexivity.
+  rewrite (filled_add 32 m dest src 0).
+  rewrite filled0.
+  unfold N.recursion. simpl.
+  repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+  (* Convert consecutive byte writes to qword writes *)
+  admit.
+Admitted.
+
+Lemma qwords_subsume_bytes_tail_32: ∀ m dest src n,
+  0 < n < 32 →
+  N.recursion (m [Ⓠ dest := m Ⓠ[ src ]]
+                  [Ⓠ 8 + dest := m Ⓠ[ 8 + src ]]
+                  [Ⓠ 16 + dest := m Ⓠ[ 16 + src ]]
+                  [Ⓠ 24 + dest := m Ⓠ[ 24 + src ]])
+    (fun i m' => m' [Ⓑ dest + 32 + i := m Ⓑ[ src + 32 + i ]]) n =
+  m [Ⓠ dest := m Ⓠ[ src ]]
+    [Ⓠ 8 + dest := m Ⓠ[ 8 + src ]]
+    [Ⓠ 16 + dest := m Ⓠ[ 16 + src ]]
+    [Ⓠ 24 + dest := m Ⓠ[ 24 + src ]]
+    [Ⓠ dest ⊖ 32 + (32 + n) := m Ⓠ[ src ⊖ 32 + (32 + n) ]]
+    [Ⓠ dest ⊖ 24 + (32 + n) := m Ⓠ[ src ⊖ 24 + (32 + n) ]]
+    [Ⓠ dest ⊖ 16 + (32 + n) := m Ⓠ[ src ⊖ 16 + (32 + n) ]]
+    [Ⓠ dest ⊖ 8 + (32 + n) := m Ⓠ[ src ⊖ 8 + (32 + n) ]].
+Proof.
+  (* The remaining n bytes after the first 32 are covered by 4 overlapping qword writes from the end *)
+  admit.
+Admitted.
+
+Lemma filled_overlap_32bytes:
+  ∀ m dest src len,
+    32 < len < 64 ->
+    filled m dest src len =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ 16 + dest := m Ⓠ[16 + src]]
+     [Ⓠ 24 + dest := m Ⓠ[24 + src]]
+     [Ⓠ dest ⊖ 32 + len := m Ⓠ[src ⊖ 32 + len]]
+     [Ⓠ dest ⊖ 24 + len := m Ⓠ[src ⊖ 24 + len]]
+     [Ⓠ dest ⊖ 16 + len := m Ⓠ[src ⊖ 16 + len]]
+     [Ⓠ dest ⊖ 8 + len := m Ⓠ[src ⊖ 8 + len]].
+Proof.
+  intros m dest src len Hlen.
+  assert (exists n, len = 32 + n /\ 0 < n < 32) as [n [Hlen_eq Hn]].
+  { exists (len - 32). split; lia. }
+  rewrite Hlen_eq.
+  
+  (* Use filled_add to split into first 32 bytes and remaining n bytes *)
+  erewrite filled_add.
+  
+  (* Convert first 32 bytes to 4 qwords *)
+  rewrite filled_32_to_4qwords.
+  
+  (* Apply lemma to show overlapping qwords cover the remaining bytes *)
+  erewrite qwords_subsume_bytes_tail_32 by lia.
+  
+  (* Simplify the expressions *)
+  psimpl.
+  reflexivity.
+Qed.
 (*
 Lemma inv_1byte_init :
   forall dest src len s m,
@@ -504,9 +574,34 @@ Proof.
   
   - step. step. step. step. step. step. step. step. step. step.
   (* 32 byte copy *)
-  
-  admit.
-  step. step. admit.
+  exists mem.
+  rewrite filled0.
+  symmetry.
+  apply filled_overlap_32bytes.
+  split.
+  + (* 32 < len from BC0 *)
+    destruct (32 <=? len) eqn:H32 in BC0.
+    * apply N.leb_le in H32.
+      destruct (len =? 32) eqn:H32eq in BC0.
+      -- apply N.eqb_eq in H32eq. subst len.
+         simpl in BC0. discriminate BC0.
+      -- apply N.eqb_neq in H32eq. lia.
+    * simpl in BC0. discriminate BC0.
+  + (* len < 64 from BC1 *)
+    destruct (64 <=? len) eqn:H64 in BC1.
+    * apply N.leb_le in H64.
+      destruct (len =? 64) eqn:H64eq in BC1.
+      -- apply N.eqb_eq in H64eq. subst len.
+         (* len = 64 case, maybe proveable*)
+         admit.
+      -- simpl in BC1. discriminate BC1.
+    * apply N.leb_gt in H64. assumption.
+  + step. step. step. step. step. step. step. step. step. step. step. step. step. step.
+  (* 64 byte copy? *)
+    exists mem.
+  rewrite filled0.
+  symmetry.
+   admit.
   step. step. step. step. step. step. admit.
   
   - step. step. step. step. step. step. step. step. step. step. step. step. admit.

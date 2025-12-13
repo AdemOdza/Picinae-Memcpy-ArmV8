@@ -194,6 +194,135 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Lia.
 
+
+Lemma four_bytes_to_dword:
+  ∀ m dest src,
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + 1 := m Ⓑ[src + 1]][Ⓑ dest + 2 := m Ⓑ[src + 2]][Ⓑ dest + 3 := m Ⓑ[src + 3]] =
+    m[Ⓓ dest := m Ⓓ[src]].
+Proof.
+  intros.
+  rewrite (setmem_merge 64 LittleE 1 1).
+  rewrite (setmem_merge 64 LittleE 2 1).  
+  rewrite (setmem_merge 64 LittleE 3 1).
+  f_equal.
+  replace 4 with (1+1+1+1) by reflexivity.
+  rewrite (getmem_split 64 LittleE 1 3).
+  rewrite (getmem_split 64 LittleE 1 2).
+  rewrite (getmem_split 64 LittleE 1 1).
+  simpl.
+  (* how cbits constructions match ???*)
+
+Admitted.
+
+Lemma filled_4_to_dword:
+  ∀ m dest src,
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + 1 := m Ⓑ[src + 1]][Ⓑ dest + 2 := m Ⓑ[src + 2]][Ⓑ dest + 3 := m Ⓑ[src + 3]] = 
+    m[Ⓓ dest := m Ⓓ[src]][Ⓓ dest := m Ⓓ[src]].
+Proof.
+  intros.
+  rewrite <- four_bytes_to_dword.
+  psimpl.
+  rewrite (N.add_comm 1 dest).
+  rewrite (N.add_comm 2 dest).
+  rewrite (N.add_comm 3 dest).
+  rewrite (N.add_comm 1 src).
+  rewrite (N.add_comm 2 src).
+  rewrite (N.add_comm 3 src).
+  apply four_bytes_to_dword.
+Qed.
+
+Lemma filled_5_to_dword:
+  ∀ m dest src,
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + 1 := m Ⓑ[src + 1]][Ⓑ dest + 2 := m Ⓑ[src + 2]][Ⓑ dest + 3 := m Ⓑ[src + 3]][Ⓑ dest + 4 := m Ⓑ[src + 4]] = 
+    m[Ⓓ dest := m Ⓓ[src]][Ⓓ dest + 1 := m Ⓓ[src + 1]].
+Proof.
+  intros.
+  (* 5 consecutive byte writes at dest..dest+4 equal:
+     1 dword write at dest (covers dest..dest+3)
+     1 dword write at dest+1 (covers dest+1..dest+4)
+     The overlapping bytes at dest+1..dest+3 are overwritten by the second dword. *)
+Admitted.
+
+Lemma filled_6_to_dword:
+  ∀ m dest src,
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + 1 := m Ⓑ[src + 1]][Ⓑ dest + 2 := m Ⓑ[src + 2]][Ⓑ dest + 3 := m Ⓑ[src + 3]][Ⓑ dest + 4 := m Ⓑ[src + 4]][Ⓑ dest + 5 := m Ⓑ[src + 5]] = 
+    m[Ⓓ dest := m Ⓓ[src]][Ⓓ dest + 2 := m Ⓓ[src + 2]].
+Proof.
+  intros.
+  (* 6 consecutive byte writes at dest..dest+5 equal:
+     1 dword write at dest (covers dest..dest+3)
+     1 dword write at dest+2 (covers dest+2..dest+5)
+     The overlapping bytes at dest+2..dest+3 are overwritten by the second dword. *)
+Admitted.
+
+Lemma filled_7_to_dword:
+  ∀ m dest src,
+    m[Ⓑ dest := m Ⓑ[src]][Ⓑ dest + 1 := m Ⓑ[src + 1]][Ⓑ dest + 2 := m Ⓑ[src + 2]][Ⓑ dest + 3 := m Ⓑ[src + 3]][Ⓑ dest + 4 := m Ⓑ[src + 4]][Ⓑ dest + 5 := m Ⓑ[src + 5]][Ⓑ dest + 6 := m Ⓑ[src + 6]] = 
+    m[Ⓓ dest := m Ⓓ[src]][Ⓓ dest + 3 := m Ⓓ[src + 3]].
+Proof.
+  intros.
+  (* 7 consecutive byte writes at dest..dest+6 equal:
+     1 dword write at dest (covers dest..dest+3)
+     1 dword write at dest+3 (covers dest+3..dest+6)
+     The overlapping byte at dest+3 is overwritten by the second dword. *)
+Admitted.
+
+
+Lemma filled_overlap_4bytes:
+  ∀ m dest src len,
+    4 <= len < 8 ->
+    filled m dest src len =
+    m[Ⓓ dest := m Ⓓ[src]][Ⓓ dest ⊖ 4 + len := m Ⓓ[src ⊖ 4 + len]].
+Proof.
+  intros m dest src len [Hge Hlt].
+  assert (len = 4 \/ len = 5 \/ len = 6 \/ len = 7) as Hcases by lia.
+  destruct Hcases as [H4|[H5|[H6|H7]]]; subst len.
+  - (* len = 4 *)
+    replace 4 with (0 + 4) at 1 by reflexivity.
+    rewrite (filled_add 4 m dest src 0).
+    rewrite filled0.
+    unfold N.recursion. simpl.
+    repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+    rewrite <- four_bytes_to_dword.
+    psimpl.
+    rewrite (N.add_comm 1 dest).
+    rewrite (N.add_comm 2 dest).
+    rewrite (N.add_comm 3 dest).
+    rewrite (N.add_comm 1 src).
+    rewrite (N.add_comm 2 src).
+    rewrite (N.add_comm 3 src).
+    apply four_bytes_to_dword.
+  - (* len = 5 *)
+    replace 5 with (0 + 5) at 1 by reflexivity.
+    rewrite (filled_add 5 m dest src 0).
+    rewrite filled0.
+    unfold N.recursion. simpl.
+    repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+    psimpl.
+    repeat rewrite (N.add_comm _ dest).
+    repeat rewrite (N.add_comm _ src).
+    apply filled_5_to_dword.
+  - (* len = 6 *)
+    replace 6 with (0 + 6) at 1 by reflexivity.
+    rewrite (filled_add 6 m dest src 0).
+    rewrite filled0.
+    unfold N.recursion. simpl.
+    repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+    psimpl.
+    repeat rewrite (N.add_comm _ dest).
+    repeat rewrite (N.add_comm _ src).
+    apply filled_6_to_dword.
+  - (* len = 7 *)
+    replace 7 with (0 + 7) at 1 by reflexivity.
+    rewrite (filled_add 7 m dest src 0).
+    rewrite filled0.
+    unfold N.recursion. simpl.
+    repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+    psimpl.
+    repeat rewrite (N.add_comm _ dest).
+    repeat rewrite (N.add_comm _ src).
+    apply filled_7_to_dword.
+  Qed.
 (*
 Lemma inv_1byte_init :
   forall dest src len s m,
@@ -264,7 +393,12 @@ Proof.
   assert (len = 3) as Hlen by admit.
   rewrite filled3_pattern by exact Hlen.
   reflexivity.
-  step. step. step. step. admit.
+  
+  step. step. step. step. 
+  exists mem. rewrite filled0.
+  symmetry.
+  apply filled_overlap_4bytes.
+  admit.
   
   - step. step. step. step. step. step. step. step. step. step.  admit.
   step. step. step. step. step. step. step. step. step. step. step. step.

@@ -374,12 +374,7 @@ Proof.
   assert (exists n, len = 8 + n /\ n < 8) as [n [Hlen_eq Hn]].
   { exists (len - 8). split; lia. }
   rewrite Hlen_eq.
-  
-  (* filled_add wants: filled m dest src (k + n) where k=8, n=n *)
-  (* So we need the form (8 + n), which we already have *)
   erewrite filled_add.
-  
-  (* Convert first 8 bytes to qword *)
   assert (filled m dest src 8 = m[Ⓠ dest := m Ⓠ[src]]) as H8.
   {
     replace 8 with (0 + 8) by reflexivity.
@@ -390,7 +385,6 @@ Proof.
     apply filled_8_to_qword.
   }
   rewrite H8. 
-   (* Case analysis on n immediately to simplify the complex match *)
   assert (n = 0 \/ n = 1 \/ n = 2 \/ n = 3 \/ n = 4 \/ n = 5 \/ n = 6 \/ n = 7) as Hcases by lia.
   destruct Hcases as [H0|[H1|[H2|[H3|[H4|[H5|[H6|H7]]]]]]]; subst n.
   
@@ -633,11 +627,7 @@ Proof.
   assert (exists n, len = 64 + n /\ 0 < n <= 32) as [n [Hlen_eq Hn]].
   { exists (len - 64). split; lia. }
   rewrite Hlen_eq.
-  
-  (* Use filled_add to split: filled m dest src (64 + n) *)
   erewrite filled_add.
-  
-  (* Convert first 64 bytes to 8 qwords *)
   assert (filled m dest src 64 = 
           m[Ⓠ dest := m Ⓠ[src]]
            [Ⓠ 8 + dest := m Ⓠ[8 + src]]
@@ -651,11 +641,7 @@ Proof.
     apply filled_64_to_8qwords.
   }
   rewrite H64.
-  
-  (* Apply qwords_subsume_bytes_tail_64_small *)
   erewrite qwords_subsume_bytes_tail_64_small by lia.
-  
-  (* Simplify arithmetic *)
   replace (64 + n) with len by lia.
   reflexivity.
 Qed.
@@ -737,7 +723,6 @@ Qed.
 
 
 
-(* Helper lemma: unaligned large copy via aligned qword writes equals filled *)
 Lemma unaligned_qword_writes_eq_filled: ∀ m dest src len,
   let m1 := m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]] in
   let m2 := m1[Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
@@ -852,7 +837,6 @@ Proof.
   set (m5 := m4[Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
                 [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]).
   
-  (* Apply the helper lemma *)
   assert (RHS: 
     m1[Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
       [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]

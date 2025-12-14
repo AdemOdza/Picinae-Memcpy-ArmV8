@@ -99,6 +99,8 @@ Proof.
   intros. reflexivity.
 Qed.
 
+
+
  
 Lemma filled_succ:
   ∀ m dest source k, (filled m dest source k)[Ⓑdest+k:= m Ⓑ[source + k]] = filled m dest source (N.succ k).
@@ -290,6 +292,64 @@ unfold Ⓠ to its getmem definition, and then unfold that, but its opaque?*)
 
 Admitted.
 
+Lemma filled_16_to_2qwords:
+  ∀ m dest src,
+    filled m dest src 16 =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]].
+Proof.
+  intros.
+  (* Use filled_add to split*)
+  replace 16 with (8 + 8) by reflexivity. rewrite (filled_add 8 m dest src 8).
+  
+  (* Convert first 8 bytes to qword *)
+  assert (filled m dest src 8 = m[Ⓠ dest := m Ⓠ[src]]) as H_first_8.
+  {
+    replace 8 with (0 + 8) at 1 by reflexivity. rewrite (filled_add 8 m dest src 0).
+    rewrite filled0. unfold N.recursion. simpl. repeat rewrite N.add_0_l. repeat rewrite N.add_0_r. apply filled_8_to_qword.
+  }
+  rewrite H_first_8. clear H_first_8. remember (m[Ⓠ dest := m Ⓠ[src]]) as m'.
+  (* Expand the recursion*)
+  unfold N.recursion at 1. simpl. repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
+  replace (dest + 8) with (8 + dest) by lia. replace (dest + 8 + 1) with (9 + dest) by lia.
+  replace (dest + 8 + 2) with (10 + dest) by lia. replace (dest + 8 + 3) with (11 + dest) by lia.
+  replace (dest + 8 + 4) with (12 + dest) by lia. replace (dest + 8 + 5) with (13 + dest) by lia. 
+  replace (dest + 8 + 6) with (14 + dest) by lia. replace (dest + 8 + 7) with (15 + dest) by lia.
+  
+  replace (src + 8) with (8 + src) by lia. replace (src + 8 + 1) with (9 + src) by lia.
+  replace (src + 8 + 2) with (10 + src) by lia. replace (src + 8 + 3) with (11 + src) by lia.
+  replace (src + 8 + 4) with (12 + src) by lia. replace (src + 8 + 5) with (13 + src) by lia.
+  replace (src + 8 + 6) with (14 + src) by lia. replace (src + 8 + 7) with (15 + src) by lia.
+  (*set merge pattern *)
+  replace (9 + dest) with ((8 + dest) + 1) by lia. replace (10 + dest) with ((8 + dest) + 2) by lia.
+  replace (11 + dest) with ((8 + dest) + 3) by lia. replace (12 + dest) with ((8 + dest) + 4) by lia.
+  replace (13 + dest) with ((8 + dest) + 5) by lia. replace (14 + dest) with ((8 + dest) + 6) by lia.
+  replace (15 + dest) with ((8 + dest) + 7) by lia. replace (9 + src) with ((8 + src) + 1) by lia.
+  replace (10 + src) with ((8 + src) + 2) by lia. replace (11 + src) with ((8 + src) + 3) by lia.
+  replace (12 + src) with ((8 + src) + 4) by lia. replace (13 + src) with ((8 + src) + 5) by lia.
+  replace (14 + src) with ((8 + src) + 6) by lia. replace (15 + src) with ((8 + src) + 7) by lia.
+  
+  (* Apply setmem_merge *)
+  rewrite (setmem_merge 64 LittleE 1 1).
+  rewrite (setmem_merge 64 LittleE 2 1).
+  rewrite (setmem_merge 64 LittleE 3 1).
+  rewrite (setmem_merge 64 LittleE 4 1).
+  rewrite (setmem_merge 64 LittleE 5 1).
+  rewrite (setmem_merge 64 LittleE 6 1).
+  rewrite (setmem_merge 64 LittleE 7 1).
+  f_equal;admit.
+  (*first goal: dest + 8 = dest +8 at a binary level.
+    second goal: getmem equality of bytes and quad-> cant unfold getmem opaque*)
+Admitted.
+
+Lemma two_qword_writes_to_filled:
+  ∀ m dest src,
+    m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]] = filled m dest src 16.
+Proof.
+  intros.
+  symmetry.
+  apply filled_16_to_2qwords.
+Qed.
 Lemma qword_subsumes_bytes_tail: ∀ m dest src n,
   n < 8 →
   N.recursion (m [Ⓠ dest := m Ⓠ[ src ]])
@@ -456,14 +516,8 @@ Proof.
   assert (exists n, len = 32 + n /\ 0 < n < 32) as [n [Hlen_eq Hn]].
   { exists (len - 32). split; lia. }
   rewrite Hlen_eq.
-  
-  (* Use filled_add to split into first 32 bytes and remaining n bytes *)
   erewrite filled_add.
-  
-  (* Convert first 32 bytes to 4 qwords *)
   rewrite filled_32_to_4qwords.
-  
-  (* Apply lemma to show overlapping qwords cover the remaining bytes *)
   erewrite qwords_subsume_bytes_tail_32 by lia.
   psimpl.
   reflexivity.
@@ -481,56 +535,6 @@ Lemma qword_subsumes_bytes_tail_16: ∀ m dest src n,
 Proof.
  admit.
  (*The remaining n bytes  at positions 16 -> 16+n-1 can be covered by 2 overlapping qword writes*)
- Admitted.
- 
-Lemma filled_16_to_2qwords:
-  ∀ m dest src,
-    filled m dest src 16 =
-    m[Ⓠ dest := m Ⓠ[src]]
-     [Ⓠ 8 + dest := m Ⓠ[8 + src]].
-Proof.
-  intros.
-  (* Use filled_add to split*)
-  replace 16 with (8 + 8) by reflexivity. rewrite (filled_add 8 m dest src 8).
-  
-  (* Convert first 8 bytes to qword *)
-  assert (filled m dest src 8 = m[Ⓠ dest := m Ⓠ[src]]) as H_first_8.
-  {
-    replace 8 with (0 + 8) at 1 by reflexivity. rewrite (filled_add 8 m dest src 0).
-    rewrite filled0. unfold N.recursion. simpl. repeat rewrite N.add_0_l. repeat rewrite N.add_0_r. apply filled_8_to_qword.
-  }
-  rewrite H_first_8. clear H_first_8. remember (m[Ⓠ dest := m Ⓠ[src]]) as m'.
-  (* Expand the recursion*)
-  unfold N.recursion at 1. simpl. repeat rewrite N.add_0_l. repeat rewrite N.add_0_r.
-  replace (dest + 8) with (8 + dest) by lia. replace (dest + 8 + 1) with (9 + dest) by lia.
-  replace (dest + 8 + 2) with (10 + dest) by lia. replace (dest + 8 + 3) with (11 + dest) by lia.
-  replace (dest + 8 + 4) with (12 + dest) by lia. replace (dest + 8 + 5) with (13 + dest) by lia. 
-  replace (dest + 8 + 6) with (14 + dest) by lia. replace (dest + 8 + 7) with (15 + dest) by lia.
-  
-  replace (src + 8) with (8 + src) by lia. replace (src + 8 + 1) with (9 + src) by lia.
-  replace (src + 8 + 2) with (10 + src) by lia. replace (src + 8 + 3) with (11 + src) by lia.
-  replace (src + 8 + 4) with (12 + src) by lia. replace (src + 8 + 5) with (13 + src) by lia.
-  replace (src + 8 + 6) with (14 + src) by lia. replace (src + 8 + 7) with (15 + src) by lia.
-  (*set merge pattern *)
-  replace (9 + dest) with ((8 + dest) + 1) by lia. replace (10 + dest) with ((8 + dest) + 2) by lia.
-  replace (11 + dest) with ((8 + dest) + 3) by lia. replace (12 + dest) with ((8 + dest) + 4) by lia.
-  replace (13 + dest) with ((8 + dest) + 5) by lia. replace (14 + dest) with ((8 + dest) + 6) by lia.
-  replace (15 + dest) with ((8 + dest) + 7) by lia. replace (9 + src) with ((8 + src) + 1) by lia.
-  replace (10 + src) with ((8 + src) + 2) by lia. replace (11 + src) with ((8 + src) + 3) by lia.
-  replace (12 + src) with ((8 + src) + 4) by lia. replace (13 + src) with ((8 + src) + 5) by lia.
-  replace (14 + src) with ((8 + src) + 6) by lia. replace (15 + src) with ((8 + src) + 7) by lia.
-  
-  (* Apply setmem_merge *)
-  rewrite (setmem_merge 64 LittleE 1 1).
-  rewrite (setmem_merge 64 LittleE 2 1).
-  rewrite (setmem_merge 64 LittleE 3 1).
-  rewrite (setmem_merge 64 LittleE 4 1).
-  rewrite (setmem_merge 64 LittleE 5 1).
-  rewrite (setmem_merge 64 LittleE 6 1).
-  rewrite (setmem_merge 64 LittleE 7 1).
-  f_equal;admit.
-  (*first goal: dest + 8 = dest +8 at a binary level.
-    second goal: getmem equality of bytes and quad-> cant unfold getmem opaque*)
 Admitted.
 
 Lemma filled_overlap_16to31bytes:
@@ -546,17 +550,9 @@ Proof.
   assert (exists n, len = 16 + n /\ n < 16) as [n [Hlen_eq Hn]].
   { exists (len - 16). split; lia. }
   rewrite Hlen_eq.
-  
-  (* Use filled_add to split into first 16 bytes and remaining n bytes *)
   erewrite filled_add.
-  
-  (* Convert first 16 bytes to 2 qwords using our lemma *)
   rewrite filled_16_to_2qwords.
-  
-  (* Apply lemma to show overlapping qwords cover the remaining bytes *)
   erewrite qword_subsumes_bytes_tail_16 by lia.
-  
-  (* Simplify the expressions *)
   psimpl.
   reflexivity.
 Qed.
@@ -582,6 +578,62 @@ Proof.
   (* Convert 64 consecutive byte writes to 8 qword writes *)
   admit.
 Admitted.
+
+Lemma qwords_subsume_bytes_tail_64_small: ∀ m dest src n,
+  0 < n <= 32 →
+  N.recursion (m [Ⓠ dest := m Ⓠ[ src ]]
+                  [Ⓠ 8 + dest := m Ⓠ[ 8 + src ]]
+                  [Ⓠ 16 + dest := m Ⓠ[ 16 + src ]]
+                  [Ⓠ 24 + dest := m Ⓠ[ 24 + src ]]
+                  [Ⓠ 32 + dest := m Ⓠ[ 32 + src ]]
+                  [Ⓠ 40 + dest := m Ⓠ[ 40 + src ]]
+                  [Ⓠ 48 + dest := m Ⓠ[ 48 + src ]]
+                  [Ⓠ 56 + dest := m Ⓠ[ 56 + src ]])
+    (fun i m' => m' [Ⓑ dest + 64 + i := m Ⓑ[ src + 64 + i ]]) n =
+  m [Ⓠ dest := m Ⓠ[ src ]]
+    [Ⓠ 8 + dest := m Ⓠ[ 8 + src ]]
+    [Ⓠ 16 + dest := m Ⓠ[ 16 + src ]]
+    [Ⓠ 24 + dest := m Ⓠ[ 24 + src ]]
+    [Ⓠ 32 + dest := m Ⓠ[ 32 + src ]]
+    [Ⓠ 40 + dest := m Ⓠ[ 40 + src ]]
+    [Ⓠ 48 + dest := m Ⓠ[ 48 + src ]]
+    [Ⓠ 56 + dest := m Ⓠ[ 56 + src ]]
+    [Ⓠ dest ⊖ 32 + (64 + n) := m Ⓠ[ src ⊖ 32 + (64 + n) ]]
+    [Ⓠ dest ⊖ 24 + (64 + n) := m Ⓠ[ src ⊖ 24 + (64 + n) ]]
+    [Ⓠ dest ⊖ 16 + (64 + n) := m Ⓠ[ src ⊖ 16 + (64 + n) ]]
+    [Ⓠ dest ⊖ 8 + (64 + n) := m Ⓠ[ src ⊖ 8 + (64 + n) ]].
+Proof.
+  (* The remaining n bytes (where n <= 32) after the first 64 are covered by 4 overlapping tail qwords *)
+  admit.
+Admitted.
+
+Lemma filled_overlap_64bytes_small:
+  ∀ m dest src len,
+    64 < len < 96 ->
+    filled m dest src len =
+    m[Ⓠ dest := m Ⓠ[src]]
+     [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ 16 + dest := m Ⓠ[16 + src]]
+     [Ⓠ 24 + dest := m Ⓠ[24 + src]]
+     [Ⓠ 32 + dest := m Ⓠ[32 + src]]
+     [Ⓠ 40 + dest := m Ⓠ[40 + src]]
+     [Ⓠ 48 + dest := m Ⓠ[48 + src]]
+     [Ⓠ 56 + dest := m Ⓠ[56 + src]]
+     [Ⓠ dest ⊖ 32 + len := m Ⓠ[src ⊖ 32 + len]]
+     [Ⓠ dest ⊖ 24 + len := m Ⓠ[src ⊖ 24 + len]]
+     [Ⓠ dest ⊖ 16 + len := m Ⓠ[src ⊖ 16 + len]]
+     [Ⓠ dest ⊖ 8 + len := m Ⓠ[src ⊖ 8 + len]].
+Proof.
+  intros m dest src len Hlen.
+  assert (exists n, len = 64 + n /\ 0 < n < 32) as [n [Hlen_eq Hn]].
+  { exists (len - 64). split; lia. }
+  rewrite Hlen_eq.
+  erewrite filled_add.
+  rewrite filled_64_to_8qwords.
+  erewrite qwords_subsume_bytes_tail_64_small by lia.
+  psimpl.
+  reflexivity.
+Qed.
 
 Lemma qwords_subsume_bytes_tail_64: ∀ m dest src n,
   0 < n < 64 →
@@ -641,18 +693,127 @@ Proof.
   assert (exists n, len = 64 + n /\ 0 < n < 64) as [n [Hlen_eq Hn]].
   { exists (len - 64). split; lia. }
   rewrite Hlen_eq.
-  
-  (* Use filled_add to split into first 64 bytes and remaining n bytes *)
   erewrite filled_add.
-  
-  (* Convert first 64 bytes to 8 qwords *)
   rewrite filled_64_to_8qwords.
-  
-  (* Apply lemma to show overlapping qwords cover the remaining bytes *)
   erewrite qwords_subsume_bytes_tail_64 by lia.
   psimpl.
   reflexivity.
 Qed.
+
+
+
+
+Lemma filled_unaligned_large: ∀ m dest src len,
+  filled m dest src len =
+  m[Ⓠ dest := m Ⓠ[src]]
+   [Ⓠ 8 + dest := m Ⓠ[8 + src]]
+   [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+   [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+   [Ⓠ 32 + (dest .& 18446744073709551600) 
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[32 + src ⊖ dest mod 16]]
+   [Ⓠ 40 + (dest .& 18446744073709551600)
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[40 + src ⊖ dest mod 16]]
+   [Ⓠ 48 + (dest .& 18446744073709551600)
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[48 + src ⊖ dest mod 16]]
+   [Ⓠ 56 + (dest .& 18446744073709551600)
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[56 + src ⊖ dest mod 16]]
+   [Ⓠ 64 + (dest .& 18446744073709551600)
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[64 + src ⊖ dest mod 16]]
+   [Ⓠ 72 + (dest .& 18446744073709551600)
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[72 + src ⊖ dest mod 16]]
+   [Ⓠ dest ⊖ 64 + len := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[src ⊖ 64 + len]]
+   [Ⓠ dest ⊖ 56 + len := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[src ⊖ 56 + len]]
+   [Ⓠ dest ⊖ 48 + len 
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+         [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+         [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]) Ⓠ[src ⊖ 48 + len]]
+   [Ⓠ dest ⊖ 40 + len
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+         [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+         [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]) Ⓠ[src ⊖ 40 + len]]
+   [Ⓠ dest ⊖ 32 + len
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+         [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+         [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+         [Ⓠ 32 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[32 + src ⊖ dest mod 16]]
+         [Ⓠ 40 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[40 + src ⊖ dest mod 16]]) Ⓠ[src ⊖ 32 + len]]
+   [Ⓠ dest ⊖ 24 + len
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+         [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+         [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+         [Ⓠ 32 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[32 + src ⊖ dest mod 16]]
+         [Ⓠ 40 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[40 + src ⊖ dest mod 16]]) Ⓠ[src ⊖ 24 + len]]
+   [Ⓠ dest ⊖ 16 + len
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+         [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+         [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+         [Ⓠ 32 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[32 + src ⊖ dest mod 16]]
+         [Ⓠ 40 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[40 + src ⊖ dest mod 16]]
+         [Ⓠ 48 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[48 + src ⊖ dest mod 16]]
+         [Ⓠ 56 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[56 + src ⊖ dest mod 16]]) Ⓠ[src ⊖ 16 + len]]
+   [Ⓠ dest ⊖ 8 + len
+    := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+         [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+         [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+         [Ⓠ 32 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[32 + src ⊖ dest mod 16]]
+         [Ⓠ 40 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[40 + src ⊖ dest mod 16]]
+         [Ⓠ 48 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[48 + src ⊖ dest mod 16]]
+         [Ⓠ 56 + (dest .& 18446744073709551600)
+          := (m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]) Ⓠ[56 + src ⊖ dest mod 16]]) Ⓠ[src ⊖ 8 + len]].
+Proof.
+  intros.
+  
+  set (m1 := m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]).
+  set (m2 := m1[Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+                [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]).
+  set (m3 := m2[Ⓠ 32 + (dest .& 18446744073709551600) := m1 Ⓠ[32 + src ⊖ dest mod 16]]
+                [Ⓠ 40 + (dest .& 18446744073709551600) := m1 Ⓠ[40 + src ⊖ dest mod 16]]).
+  set (m4 := m3[Ⓠ 48 + (dest .& 18446744073709551600) := m1 Ⓠ[48 + src ⊖ dest mod 16]]
+                [Ⓠ 56 + (dest .& 18446744073709551600) := m1 Ⓠ[56 + src ⊖ dest mod 16]]).
+  set (m5 := m4[Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
+                [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]).
+  
+
+  assert (RHS: 
+    m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
+     [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+     [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+     [Ⓠ 32 + (dest .& 18446744073709551600) := m1 Ⓠ[32 + src ⊖ dest mod 16]]
+     [Ⓠ 40 + (dest .& 18446744073709551600) := m1 Ⓠ[40 + src ⊖ dest mod 16]]
+     [Ⓠ 48 + (dest .& 18446744073709551600) := m1 Ⓠ[48 + src ⊖ dest mod 16]]
+     [Ⓠ 56 + (dest .& 18446744073709551600) := m1 Ⓠ[56 + src ⊖ dest mod 16]]
+     [Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
+     [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]
+     [Ⓠ dest ⊖ 64 + len := m1 Ⓠ[src ⊖ 64 + len]]
+     [Ⓠ dest ⊖ 56 + len := m1 Ⓠ[src ⊖ 56 + len]]
+     [Ⓠ dest ⊖ 48 + len := m2 Ⓠ[src ⊖ 48 + len]]
+     [Ⓠ dest ⊖ 40 + len := m2 Ⓠ[src ⊖ 40 + len]]
+     [Ⓠ dest ⊖ 32 + len := m3 Ⓠ[src ⊖ 32 + len]]
+     [Ⓠ dest ⊖ 24 + len := m3 Ⓠ[src ⊖ 24 + len]]
+     [Ⓠ dest ⊖ 16 + len := m4 Ⓠ[src ⊖ 16 + len]]
+     [Ⓠ dest ⊖ 8 + len := m4 Ⓠ[src ⊖ 8 + len]] = 
+    filled m dest src len).
+  {
+    unfold m1, m2, m3, m4.
+    admit.
+  }
+  rewrite <- RHS.
+  unfold m1, m2, m3, m4, m5.
+  psimpl.
+  reflexivity.
+Admitted.
+
 (*
 Lemma inv_1byte_init :
   forall dest src len s m,
@@ -845,10 +1006,33 @@ Proof.
   exists mem.
   rewrite filled0.
   symmetry.
+  apply filled_overlap_64bytes_small.
+  split.
+  -- 
+    destruct (64 <=? len) eqn:H64 in BC1.
+    ++ apply N.leb_le in H64.
+       destruct (len =? 64) eqn:H64eq in BC1.
+       ** apply N.eqb_eq in H64eq. subst len.
+          simpl in BC1. discriminate BC1.
+       ** apply N.eqb_neq in H64eq. lia.
+    ++ simpl in BC1. discriminate BC1.
+  -- 
+  (* len < 96 *) 
   admit.
   
-  - step. step. step. step. step. step. step. step. step. step. step. step. admit.
-  step. step. step. step. step. step. step. step. step. step. step. step. admit.
+  - step. step. step. step. step. step. step. step. step. step. step. step.
+  (* invarient 0x100130 64 byte copy loop *)
+    exists mem. 
+  rewrite filled0.
+  exists 16.
+  apply two_qword_writes_to_filled.
+
+  step. step. step. step. step. step. step. step. step. step. step. step. 
+  (* size < 144 bytes *)
+  exists mem.
+  rewrite filled0.
+  symmetry.
+  apply filled_unaligned_large.
   
   - step. step. step. step. step. step. step. step. step. step. step. step. step. step. step.
   step. step. step. step. step. step. step. admit.

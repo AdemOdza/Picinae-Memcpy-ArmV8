@@ -48,7 +48,12 @@
 % Document %
 %%%%%%%%%%%%
 
-
+\lstset{
+    backgroundcolor=\color{lightgray!20}, % optional: add background color
+    frame=single,                          % adds a box around the code
+    basicstyle=\ttfamily,                  % code font
+    breaklines=true                        % wrap long lines
+}
 
 
 \begin{document}
@@ -70,15 +75,13 @@
         firstnumber=1,
         numberfirstline=true
         }
-        \caption{The $memcpy$ function header}
-        \label{code.1}
         \begin{lstlisting}[language=c,frame=single]
-            #include <string.h>
-            #include <stdint.h>
-            #include <endian.h>
+        #include <string.h>
+        #include <stdint.h>
+        #include <endian.h>
 
-            void *memcpy(void *restrict dest, const void *restrict src, size_t n)
-            {
+        void *memcpy(void *restrict dest, const void *restrict src, size_t n)
+        {
                 unsigned char *d = dest;
                 const unsigned char *s = src;
 
@@ -98,7 +101,10 @@
                 for (; (uintptr_t)s % 4 && n; n--) *d++ = *s++;
             ...
         \end{lstlisting}
+        \caption{The $memcpy$ function header}
+        \label{code.1}
     \end{figure}
+    
 
     In figure $1.1$, we see the header of the $memcpy$ function. Three parameters are required: 
     the $dest$ pointer where the data will be copied to, 
@@ -117,8 +123,6 @@
         firstnumber=25,
         numberfirstline=true
         }
-        \caption{Copying 16 to 32 bytes}
-        \label{code.1}
         \begin{lstlisting}[language=c,frame=single]
         if ((uintptr_t)d % 4 == 0) {
             for (; n>=16; s+=16, d+=16, n-=16) {
@@ -146,9 +150,78 @@
         }
             ...
         \end{lstlisting}
+        \caption{Copying 16 to 32 bytes}
+        \label{code.2}
     \end{figure}
     The segment of code shown in figure $1.2$ handles the copying of bytes when $n >= 16$. 
-    $16$ byte chunks are copied over until we have less than $16$ to copy. At that point, the remaining if statements copy the leftover bytes.
+    $16$ byte chunks are copied over until we have less than $16$ to copy. At that point, the remaining if statements copy the leftover bytes. \\
+
+    % n greater than 32 %
+        \begin{figure}[hbtp]
+        \lstset{
+        numbers=left, 
+        firstnumber=50,
+        numberfirstline=true
+        }
+        \begin{lstlisting}[language=c,frame=single]
+        if (n >= 32) switch ((uintptr_t)d % 4) {
+	case 1:
+		w = *(u32 *)s;
+		*d++ = *s++;
+		*d++ = *s++;
+		*d++ = *s++;
+		n -= 3;
+		for (; n>=17; s+=16, d+=16, n-=16) {
+			x = *(u32 *)(s+1);
+			*(u32 *)(d+0) = (w LS 24) | (x RS 8);
+			w = *(u32 *)(s+5);
+			*(u32 *)(d+4) = (x LS 24) | (w RS 8);
+			x = *(u32 *)(s+9);
+			*(u32 *)(d+8) = (w LS 24) | (x RS 8);
+			w = *(u32 *)(s+13);
+			*(u32 *)(d+12) = (x LS 24) | (w RS 8);
+		}
+		break;
+	case 2:
+		w = *(u32 *)s;
+		*d++ = *s++;
+		*d++ = *s++;
+		n -= 2;
+		for (; n>=18; s+=16, d+=16, n-=16) {
+			x = *(u32 *)(s+2);
+			*(u32 *)(d+0) = (w LS 16) | (x RS 16);
+			w = *(u32 *)(s+6);
+			*(u32 *)(d+4) = (x LS 16) | (w RS 16);
+			x = *(u32 *)(s+10);
+			*(u32 *)(d+8) = (w LS 16) | (x RS 16);
+			w = *(u32 *)(s+14);
+			*(u32 *)(d+12) = (x LS 16) | (w RS 16);
+		}
+		break;
+	case 3:
+		w = *(u32 *)s;
+		*d++ = *s++;
+		n -= 1;
+		for (; n>=19; s+=16, d+=16, n-=16) {
+			x = *(u32 *)(s+3);
+			*(u32 *)(d+0) = (w LS 8) | (x RS 24);
+			w = *(u32 *)(s+7);
+			*(u32 *)(d+4) = (x LS 8) | (w RS 24);
+			x = *(u32 *)(s+11);
+			*(u32 *)(d+8) = (w LS 8) | (x RS 24);
+			w = *(u32 *)(s+15);
+			*(u32 *)(d+12) = (x LS 8) | (w RS 24);
+		}
+		break;
+	}
+        \end{lstlisting}
+        \caption{Copying more than 32 bytes}
+        \label{code.3}
+    \end{figure}
+
+    In the section of code shown in figure $1.3$, we once again copy 16 bytes at a time. Though, this time, we are handling the case where the destination pointer is not aligned to the word boundary.
+    Depending on how many bytes are needed to reach the next word, we enter a different case in the switch statement. Each case then manually copies the bytes needed to reach the next byte boundary. Once that byte boundary is reached, we then copy bytes that are not aligned with the word boundaries. In the for loop, some bits are taken from the current word and the rest are taken from the next word (Depending on which case we are in, this value is different.) \\
+    
 
 
 

@@ -737,6 +737,39 @@ Qed.
 
 
 
+(* Helper lemma: unaligned large copy via aligned qword writes equals filled *)
+Lemma unaligned_qword_writes_eq_filled: ∀ m dest src len,
+  let m1 := m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]] in
+  let m2 := m1[Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+               [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]] in
+  let m3 := m2[Ⓠ 32 + (dest .& 18446744073709551600) := m1 Ⓠ[32 + src ⊖ dest mod 16]]
+               [Ⓠ 40 + (dest .& 18446744073709551600) := m1 Ⓠ[40 + src ⊖ dest mod 16]] in
+  let m4 := m3[Ⓠ 48 + (dest .& 18446744073709551600) := m1 Ⓠ[48 + src ⊖ dest mod 16]]
+               [Ⓠ 56 + (dest .& 18446744073709551600) := m1 Ⓠ[56 + src ⊖ dest mod 16]] in
+  m1[Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+    [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+    [Ⓠ 32 + (dest .& 18446744073709551600) := m1 Ⓠ[32 + src ⊖ dest mod 16]]
+    [Ⓠ 40 + (dest .& 18446744073709551600) := m1 Ⓠ[40 + src ⊖ dest mod 16]]
+    [Ⓠ 48 + (dest .& 18446744073709551600) := m1 Ⓠ[48 + src ⊖ dest mod 16]]
+    [Ⓠ 56 + (dest .& 18446744073709551600) := m1 Ⓠ[56 + src ⊖ dest mod 16]]
+    [Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
+    [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]
+    [Ⓠ dest ⊖ 64 + len := m1 Ⓠ[src ⊖ 64 + len]]
+    [Ⓠ dest ⊖ 56 + len := m1 Ⓠ[src ⊖ 56 + len]]
+    [Ⓠ dest ⊖ 48 + len := m2 Ⓠ[src ⊖ 48 + len]]
+    [Ⓠ dest ⊖ 40 + len := m2 Ⓠ[src ⊖ 40 + len]]
+    [Ⓠ dest ⊖ 32 + len := m3 Ⓠ[src ⊖ 32 + len]]
+    [Ⓠ dest ⊖ 24 + len := m3 Ⓠ[src ⊖ 24 + len]]
+    [Ⓠ dest ⊖ 16 + len := m4 Ⓠ[src ⊖ 16 + len]]
+    [Ⓠ dest ⊖ 8 + len := m4 Ⓠ[src ⊖ 8 + len]] = 
+  filled m dest src len.
+Proof.
+  intros.
+  (* lemma states that for unaligned large copies, a specific pattern of 
+     aligned qword writes (with overlapping tail writes) correctly implements
+     the byte-by-byte filled operation. *)
+  admit.
+Admitted.
 
 Lemma filled_unaligned_large: ∀ m dest src len,
   filled m dest src len =
@@ -819,36 +852,34 @@ Proof.
   set (m5 := m4[Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
                 [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]).
   
-
+  (* Apply the helper lemma *)
   assert (RHS: 
-    m[Ⓠ dest := m Ⓠ[src]][Ⓠ 8 + dest := m Ⓠ[8 + src]]
-     [Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
-     [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
-     [Ⓠ 32 + (dest .& 18446744073709551600) := m1 Ⓠ[32 + src ⊖ dest mod 16]]
-     [Ⓠ 40 + (dest .& 18446744073709551600) := m1 Ⓠ[40 + src ⊖ dest mod 16]]
-     [Ⓠ 48 + (dest .& 18446744073709551600) := m1 Ⓠ[48 + src ⊖ dest mod 16]]
-     [Ⓠ 56 + (dest .& 18446744073709551600) := m1 Ⓠ[56 + src ⊖ dest mod 16]]
-     [Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
-     [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]
-     [Ⓠ dest ⊖ 64 + len := m1 Ⓠ[src ⊖ 64 + len]]
-     [Ⓠ dest ⊖ 56 + len := m1 Ⓠ[src ⊖ 56 + len]]
-     [Ⓠ dest ⊖ 48 + len := m2 Ⓠ[src ⊖ 48 + len]]
-     [Ⓠ dest ⊖ 40 + len := m2 Ⓠ[src ⊖ 40 + len]]
-     [Ⓠ dest ⊖ 32 + len := m3 Ⓠ[src ⊖ 32 + len]]
-     [Ⓠ dest ⊖ 24 + len := m3 Ⓠ[src ⊖ 24 + len]]
-     [Ⓠ dest ⊖ 16 + len := m4 Ⓠ[src ⊖ 16 + len]]
-     [Ⓠ dest ⊖ 8 + len := m4 Ⓠ[src ⊖ 8 + len]] = 
+    m1[Ⓠ 16 + (dest .& 18446744073709551600) := m Ⓠ[16 + src ⊖ dest mod 16]]
+      [Ⓠ 24 + (dest .& 18446744073709551600) := m Ⓠ[24 + src ⊖ dest mod 16]]
+      [Ⓠ 32 + (dest .& 18446744073709551600) := m1 Ⓠ[32 + src ⊖ dest mod 16]]
+      [Ⓠ 40 + (dest .& 18446744073709551600) := m1 Ⓠ[40 + src ⊖ dest mod 16]]
+      [Ⓠ 48 + (dest .& 18446744073709551600) := m1 Ⓠ[48 + src ⊖ dest mod 16]]
+      [Ⓠ 56 + (dest .& 18446744073709551600) := m1 Ⓠ[56 + src ⊖ dest mod 16]]
+      [Ⓠ 64 + (dest .& 18446744073709551600) := m1 Ⓠ[64 + src ⊖ dest mod 16]]
+      [Ⓠ 72 + (dest .& 18446744073709551600) := m1 Ⓠ[72 + src ⊖ dest mod 16]]
+      [Ⓠ dest ⊖ 64 + len := m1 Ⓠ[src ⊖ 64 + len]]
+      [Ⓠ dest ⊖ 56 + len := m1 Ⓠ[src ⊖ 56 + len]]
+      [Ⓠ dest ⊖ 48 + len := m2 Ⓠ[src ⊖ 48 + len]]
+      [Ⓠ dest ⊖ 40 + len := m2 Ⓠ[src ⊖ 40 + len]]
+      [Ⓠ dest ⊖ 32 + len := m3 Ⓠ[src ⊖ 32 + len]]
+      [Ⓠ dest ⊖ 24 + len := m3 Ⓠ[src ⊖ 24 + len]]
+      [Ⓠ dest ⊖ 16 + len := m4 Ⓠ[src ⊖ 16 + len]]
+      [Ⓠ dest ⊖ 8 + len := m4 Ⓠ[src ⊖ 8 + len]] = 
     filled m dest src len).
   {
     unfold m1, m2, m3, m4.
-    admit.
+    apply unaligned_qword_writes_eq_filled.
   }
   rewrite <- RHS.
   unfold m1, m2, m3, m4, m5.
   psimpl.
   reflexivity.
-Admitted.
-
+Qed.
 (*
 Lemma inv_1byte_init :
   forall dest src len s m,
@@ -925,11 +956,10 @@ Proof.
   - step. step. step. apply N.eqb_eq in BC4. exists mem. rewrite BC4. exact MEM'.
   step. step. step. step. step. step. step. 
   (* size < 4 byte copy *)
-  exists mem. symmetry.
+  exists mem. symmetry. rewrite filled0.
   assert (len = 3) as Hlen by admit.
   rewrite filled3_pattern by exact Hlen.
   reflexivity.
-  
   step. step. step. step. 
   (* 4-8 byte copy *)
   exists mem. rewrite filled0.

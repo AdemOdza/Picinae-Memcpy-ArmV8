@@ -118,7 +118,7 @@
 
 
     % n between 16 and 32 %
-        \begin{figure}[hbtp]
+    \begin{figure}[hbtp]
         \lstset{
         numbers=left, 
         firstnumber=25,
@@ -158,7 +158,7 @@
     $16$ byte chunks are copied over until we have less than $16$ to copy. At that point, the remaining if statements copy the leftover bytes. \\
 
     % n greater than 32 %
-        \begin{figure}[hbtp]
+    \begin{figure}[hbtp]
         \lstset{
         numbers=left, 
         firstnumber=50,
@@ -217,16 +217,68 @@
 	}
         \end{lstlisting}
         \caption{Copying more than 32 bytes}
-        \label{code.3}
+        \label{code.4}
     \end{figure}
 
-    In the section of code shown in figure $1.3$, we once again copy 16 bytes at a time. Though, this time, we are handling the case where the destination pointer is not aligned to the word boundary.
+    In the section of code shown in figure $1.4$, we once again copy 16 bytes at a time. Though, this time, we are handling the case where the destination pointer is not aligned to the word boundary.
     Depending on how many bytes are needed to reach the next word, we enter a different case in the switch statement. Each case then manually copies the bytes needed to reach the next byte boundary. Once that byte boundary is reached, we then copy bytes that are not aligned with the word boundaries. In the for loop, some bits are taken from the current word and the rest are taken from the next word (Depending on which case we are in, this value is different.) \\
     
+    \begin{figure}[hbtp]
+        \lstset{
+        numbers=left, 
+        firstnumber=100,
+        numberfirstline=true
+        }
+        \begin{lstlisting}[language=c,frame=single]
+            if (n&16) {
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+            }
+            if (n&8) {
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+            }
+            if (n&4) {
+                *d++ = *s++; *d++ = *s++; *d++ = *s++; *d++ = *s++;
+            }
+            if (n&2) {
+                *d++ = *s++; *d++ = *s++;
+            }
+            if (n&1) {
+                *d = *s;
+            }
+            return dest;
+        \end{lstlisting}
+        \caption{Leftover bytes}
+        \label{code.5}
+    \end{figure}
+    
+    In figure $1.5$, the copying of any leftover bytes from the previous loops are handled. 
 
+
+
+    % Final Bytes %
+    \begin{figure}[hbtp]
+        \lstset{
+        numbers=left, 
+        firstnumber=25,
+        numberfirstline=true
+        }
+        \begin{lstlisting}[language=c,frame=single]
+            for (; n; n--) *d++ = *s++;
+	        return dest;
+        \end{lstlisting}
+        \caption{Copying for Non GNU Compiler}
+        \label{code.4}
+    \end{figure}
+    Figure $1.4$ is only executed if the \verb|ifdef __GNUC__| preprocessor check passes. 
+    Bytes are simply copied one by one using a for loop before the destination is returned.
 
 
     \clearpage
+    
     \chapter{Motivation}
     Memcpy is a widely used function that is frequently associated with vulnerabilities such as return-oriented Programming and Buffer overflow attacks. 
     This function is dangerous to use because it does not validate buffer sizes. 
@@ -245,6 +297,7 @@
     The important factor is secure usage of memcpy depends on bounds checking and defense programming because removing memcpy is impractical. 
 
     \clearpage
+    
     \chapter{Technical Approach}
         For our proof, we took a lot of inspiration from the proof of the $memset$ function. 
     There is one key difference in the behavior of the two function: $memset$ sets all modified bytes to the same value (Which is provided by the user) while $memcpy$ will set bytes to the corresponding value at the provided source pointer.
@@ -322,8 +375,11 @@
 
     The final invariant states that the memory state should equal a fully filled memory state ($filled \: mem \: dest \: src \: len$). All $len$ bytes at the $src$ address
     should have been copied to the memory at $dest$. 
+    
 
     \section{Control Flow}
+    \includegraphics[width=\textwidth]{cfg_memcpy.png}
+
     Below we have included a summarized control flow diagram of our assembly program:
     \begin{itemize}
         \item $n$ more than $128$ bytes:
@@ -581,13 +637,6 @@
     The only missing pieces of our proof were a few small lemmas directly related to the functional representation of memory in the Picin\ae~system.
     These lemmas do not affect the overall proof structure or our invariants and require a more fine grained reasoning about the memory model.
 
-    \section{Results and Discussion}
-    A slight variation on how to conduct the proof from previous attempts.
-    A negative aspect was that the main issue we were trying to solve: 32 < 32 or other length related impossible goals, were not solved.
-    They remained persistent, contributing to the list of reasons this implementation did not survive into the final submission.
-    Due to these issues, we did not attempt to prove all goals; we stopped after a little after half of the goals were solved.
-    Even though half of the goals were proved, most length related goals were passed with admits.
-    This evaluation is only based on the limited implementation that was attempted; further work and editing of theorems and proofs are needed to make full judgement. 
     \clearpage
 
     \chapter{Future Work}
@@ -595,10 +644,81 @@
     In our case these are related directly to the fine grained representation of memory in Picin\ae.
 
     \section{Connecting K to the CPU State}
-    Currently, the solution implemented does not utilize a connection between k and the CPU registers.
-    For future work, it is recommended to implement a connection between k and the CPU.
+    Currently, the solution implemented does not utilize a connection between $k$ and the CPU registers.
+    For future work, it is recommended to implement a connection between $k$ and the CPU.
     A small tester implementation was attempted but, due to restriction of time, left uncompleted and voided from final submission of project.
-    A walk-through of the implementation is provided below.
+    The core idea of the strategy is to use $k$ as a counter of the bytes that have already been counted.
+    A walk-through of the implementation is provided below. \\
+
+    Invariant Set: 
+    \begin{lstlisting}
+    | 0x100130 => Some (exists k, k <= len /\ memcpy_regs s k)
+    \end{lstlisting} 
+    \begin{itemize}
+        \item Invariant for $k$ bytes copied, where $k <= len$
+        \item Present in the final submission version
+    \end{itemize}
+
+    Partial Correctness Theorem:
+    \begin{itemize}
+        \item Original: 
+        \begin{itemize}
+            \item \begin{lstlisting}
+                forall s dest src len mem t s' x' k
+                (ENTRY: startof t (x', s') = (Addr 0x100000,s))
+                (MDL: models arm8typctx s)
+                (MEM: s V_MEM64 = mem)
+                (R0: s R_X0 = dest)
+                (R1: s R_X1 = src)
+                (R2: s R_X2 = len)
+                (BOUNDS_DEST: dest + len < 2^64)
+                (BOUNDS_SRC : src + len < 2^64)
+                (DIST: (dest + len < src) \/ (src + len < dest))
+                (K_lim: 0 <= k <= len),
+                satisfies_all memcpy_lo_memcpy_armv8
+                (memcpy_invset' mem dest src len)
+                program_exit
+                ((x', s')::t).
+            \end{lstlisting}
+        \end{itemize}
+        \item Updated: 
+        \begin{itemize}
+            \item \begin{lstlisting}
+                forall s dest src len mem t s' x' k
+                (ENTRY: startof t (x', s') = (Addr 0x100000,s))
+                (MDL: models arm8typctx s)
+                (MEM: s V_MEM64 = filled mem dest src k)
+                (R0: s R_X0 = dest)
+                (R1: s R_X1 = src)
+                (R2: s R_X2 = len - k)  
+                (K_lim: 0 <= k <= len)
+                (BOUNDS_DEST: dest + len < 2^64)
+                (BOUNDS_SRC : src + len < 2^64)
+                (DIST: (dest + len < src) \/ (src + len < dest)),
+                satisfies_all memcpy_lo_memcpy_armv8
+                (memcpy_invset' mem dest src len)
+                program_exit
+                ((x', s')::t).
+            \end{lstlisting}
+        \end{itemize}
+        \item Specific Lines Changed
+        \begin{itemize}
+            \item The $MEM$ assumption assumes that the memory follows our filled definition, rather than some arbitrary value.
+            \item THe $R2$ assumption stats that the $R\_X2$ contains the remaining bytes to copy $(len - k)$ rather than the initial target length.
+        \end{itemize}
+    \end{itemize}
+
+    
+    \section{Results and Discussion}
+    A slight variation on how to conduct the proof from previous attempts.
+    A negative aspect was that the main issue we were trying to solve: 32 < 32 or other length related impossible goals, were not solved.
+    They remained persistent, contributing to the list of reasons this implementation did not survive into the final submission.
+    Due to these issues, we did not attempt to prove all goals; we stopped after a little after half of the goals were solved.
+    Even though half of the goals were proved, most length related goals were passed with admits.
+    This evaluation is only based on the limited implementation that was attempted; further work and editing of theorems and proofs are needed to make full judgement. 
+
+
+
 
     \clearpage
 

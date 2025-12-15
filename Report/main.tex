@@ -17,6 +17,7 @@
 \usepackage{packages/sleek-title}
 \usepackage{packages/sleek-theorems}
 \usepackage{packages/sleek-listings}
+\usepackage{enumitem}
 
 %%%%%%%%%%%%%%
 % Title-page %
@@ -226,12 +227,30 @@
 
 
     \clearpage
+    \chapter{Motivation}
+    Memcpy is a widely used function that is frequently associated with vulnerabilities such as return-oriented Programming and Buffer overflow attacks. 
+    This function is dangerous to use because it does not validate buffer sizes. 
+    Attackers can manipulate data in the overflowed areas on the stack to execute malicious code. 
+
+    A famous case where memcpy played a role was in HeartBleed (CVE-2014-0160).
+    A OpenSSL TLS heartbeat implementation, a user length form was trusted without validation. 
+    This length was passed to memcpy without validation leading to attackers reading server memory in each request. 
+    The unsafe use of memcpy in the Heartbeat handler caused an out-of-bounds memory read.  
+    The impact of this catastrophe led to leakage of passwords and session cookies, ultimately affecting millions of servers worldwide. 
+    This meant that authentication was breached and sensitive information was compromised. [1]
+
+    Despite being associated with security vulnerabilities, memcpy is fundamental to modern computing systems.
+    This function is used in operating systems, cryptography, and embedded systems.
+    Also they are used in web servers and secure protocols for data movement.
+    The important factor is secure usage of memcpy depends on bounds checking and defense programming because removing memcpy is impractical. 
+
+    \clearpage
     \chapter{Technical Approach}
         For our proof, we took a lot of inspiration from the proof of the $memset$ function. 
     There is one key difference in the behavior of the two function: $memset$ sets all modified bytes to the same value (Which is provided by the user) while $memcpy$ will set bytes to the corresponding value at the provided source pointer.
     This similarity allowed for us to create modified versions of the $memset$ definitions and apply them to our proof. \\
 
-
+    \section{Invariants}
     The first step in our proof was to create some definitions for certain properties of $memcpy$. \\
     We created the $filled$ definition to represent the modified memory: 
     \begin{lstlisting}
@@ -304,37 +323,313 @@
     The final invariant states that the memory state should equal a fully filled memory state ($filled \: mem \: dest \: src \: len$). All $len$ bytes at the $src$ address
     should have been copied to the memory at $dest$. 
 
+    \section{Control Flow}
+    Below we have included a summarized control flow diagram of our assembly program:
+    \begin{itemize}
+        \item $n$ more than $128$ bytes:
+        \begin{itemize}
+            \item Load data from the source at $16$ byte (Up to $64$) in intervals and store it in the corresponding location at the destination
+            \item In each loop iteration:
+            \begin{itemize}
+                \item Copy 64 bytes 2 words at a time
+                \item Subtract 64 from the remaining value in $R_{X0}$
+                \item Once the remaining length is below $64$, break from the loop and copy the remaining bytes.
+            \end{itemize}
+        \end{itemize}
+        \item It then checks $n > 32$:
+        \begin{itemize}
+            \item Then $n > 64$
+            \item $n > 96$
+            \begin{itemize}
+                \item Copy the first $32$ bytes then fall through to the $64$ byte copy.
+                \item If not, jump to the $64$ byte copy and copy the required bytes.
+            \end{itemize}
+            \item $n < 16$
+            \begin{itemize}
+                \item If not, copy the double word and return. 
+            \end{itemize}
+            \item $n < 8$
+            \begin{itemize}
+                \item If not, copy the double word and return. 
+            \end{itemize}
+            \item $n < 4$
+            \begin{itemize}
+                \item If $n < 4$, check bit values to determine length. Copy the remaining bytes and return. 
+                \item Else, copy the remaining $4$ bytes. 
+            \end{itemize}
+        \end{itemize}
+    \end{itemize}
 
+    \section{Proof Strategy}
+    Our general proof strategy is as follows:
+    \begin{itemize}
+        \item Lemmas involving the $filled$ definition
+        \begin{itemize}
+            \item $filled0$: copying $0$ bytes does not change memory
+            \item $filled\_succ$: this lemma proves how to extend a memory copy by one additional byte. $k$ bytes plus an additional byte equals $k+1$ bytes copied.
+            \item $filled\_add$: this follows similar logic to $filled\_succ$ but for $k+n$ bytes. This is solved through recursion on $n$.
+            \item $filled1$: copying $1$ byte in filled is the same as copying $1$ byte from $src$ to $dst$
+            \item $filled2$: copying $2$ byte in filled is the same as copying $2$ byte from $src$ to $dst$
+            \item $filled3 / filled3\_pattern$:  expands $filled3$ into $3$ byte set updates
+            \item $filled4, filled8, filled16$: helpful lemmas that are specialization of filled\_add, for $4$ bytes, etc. Simplify reasoning for writes of this size.
+        \end{itemize}
+        \item Byte-to-word Conversion: consecutive bytes can combined into word or quad word writes.
+        \begin{itemize}
+            \item four\_bytes\_to\_dword: four bytes, one after the other is equivalent to one dword writes.
+            \begin{itemize}
+                \item $filled \_4\_to\_dword$: four bytes can be covered by a dword. (write at $dest$)
+                \item $filled \_5\_to\_dword$: five bytes span two overlapping dwords. (writes at $dest$ and $dest+1$)
+                \item $filled \_6\_to\_dword$: six bytes span two overlapping dwords.  (writes at $dest$ and $dest+2$)
+                \item $filled \_7\_to\_dword$: seven bytes span two overlapping dwords. (writes at $dest$ and $dest+3$)
+                \item Other defined lemmas follow this pattern to reason about how our program writes small copies with overlapping dwords.
+            \end{itemize}
+            \item $filled\_8\_to\_qword$: follows similar logic. Eight consecutive bytes is equivalent to 1 qword.
+            \item $filled\_32\_to\_4qwords$ and $filled\_64\_to\_8qwords$ follows similar logic.
+        \end{itemize}
+        \item Handling overlapping writes: We introduced lemmas to handle unaligned lengths. 
+        Copies are handled by this method usually by copying the first bytes (head) and the last bytes (tail). 
+        In the case of unaligned lengths, these writes can overlap. 
+        The lemmas shows how byte writes of aligned writes plus overlapping tail word writes to prove that the resulting memory is equivalent. 
+        \begin{itemize}
+            \item $qword\_subsumes\_bytes\_tail$: last bytes of a sequence can be covered by one or more qword writes. qword(8bytes) at dest plus n bytes after it is the same as qword at dest  and qword at dest+n.
+            \begin{itemize}
+                \item We extend this logic into multiple lemmas reasoning about how this concept holds for different lengths.
+            \end{itemize}
+            \item $filled\_overlap methods$: replace sequences of bytes with the larger writes (either qwords or dword), while accounting for overlapping bytes using the previous lemma about how the tail bytes are covered for the with multiple writes.
+            \begin{itemize}
+                \item We use this logic to make a lemma for each possible byte path in our program.
+            \end{itemize}
+            \item $filled\_N\_toMqwords$: replace many byte-level updates with word-level writes at aligned offsets where $N$ is exact multiple of word size of no overlap.
+            \begin{itemize}
+                \item We reuse this logic creating multiple lemmas of different $N$ qwords consecutive writes.
+            \end{itemize}
+            \item $filled\_unaligned\_large$: large unaligned byte-level copy equals a small pattern of qwords writes plus bounded overlapping tail qwords.
+            \item $two\_qword\_writes\_to\_filled$: fold 16 byte copy into two $8$ byte qword writes.
+            \item $filled\_lt4$: copies small ($1$,$2$,or $3$) blocks from start, middle, and end (i.e. copying one-by-one).
+        \end{itemize}
+    \end{itemize}
+    We used the respective lemmas to handle each of the length cases mentioned in our control flow graph.
+    At each return point we solve a postcondition (invariant goal) that states the memory at the source and the memory at the destination are the same.
     \clearpage
-
+    
     \chapter{Team Organization}
     Our team consists of 5 people: 
     \begin{itemize}
         \item Adem Odza 
-        \item \subitem Created presentation slides, gave presentation, 
+        \begin{itemize}
+            \item Initial setup of environment
+            \item Created invariants
+            \item Modified $memset$ proof statement to fit definition of $memcpy$
+            \item Modified $memset$'s $filled$ definition to fit definition of $memcpy$
+            \item Created and presented presentation slides
+            \item Created \LaTeX~report
+        \end{itemize}
         \item Avery Arnold
+        \begin{itemize}
+            \item Mapping of assembly and CFG graph
+            \item Helped with slides and gave presentation
+            \item Did the proof and solved length goals
+            \item Completed Invariant Goals:
+            \begin{itemize}
+                \item $8$-$15$ byte copy path
+                \item $16$-$32$ byte copy path
+            \end{itemize}
+            \item Completed Lemmas:
+            \begin{itemize}
+                \item $filled8$
+                \item $filled\_overlap\_16to32bytes$
+                \item $filled\_overlap\_8bytes$
+                \item $filled\_overlap\_8bytes$
+            \end{itemize}
+            \item Admitted Lemmas:
+            \begin{itemize}
+                \item $qword\_subsumes\_bytes\_tail\_16$
+                \item $qword\_subsumes\_bytes\_tail$
+                \item $filled\_16\_to\_2qwords$
+                \item $filled\_8\_to\_qword$
+                \item $qwords\_subsume\_bytes\_tail\_32$
+            \end{itemize}
+        \end{itemize}
         \item Dagmawet Zemedkun
+        \begin{itemize}
+            \item Mapping of CFG Graph
+            \item Tester/Research implementation of connecting k to CPU state
+            \begin{itemize}
+                \item Modification of $memcpy\_partial\_correctness$
+                \item Solved a little over half of the goals
+            \end{itemize}
+            \item Proved $4$-$7$ byte copy path Invariant:
+            \item Completed lemmas:
+            \begin{itemize}
+                \item $filled1$
+                \item $filled2$
+                \item $filled\_lt4$
+            \end{itemize}
+            \item Solved Code/Proved:
+            \begin{itemize}
+                \item $filled4$
+                \item $filled\_succ$
+                \item Length proof 
+                \begin{itemize}
+                    \item $0 < len < 4$
+                    \item $4<= len < 8$
+                \end{itemize}
+            \end{itemize}
+            \item Edited/Wrote:
+            \begin{itemize}
+                \item Final report
+                \begin{itemize}
+                    \item Connecting k to CPU state under Future Works 
+                    \item Evaluations	
+                    \item General proof strategy 
+                \end{itemize}
+                \item filled 
+            \end{itemize}
+        \end{itemize}
         \item Omar Khan
-        \item Fatema Tuj Johora
-    \end{itemize}
+        \begin{itemize}
+            \item Contributed to creating CFG Graph
+            \item Mapped out entire binary code in Rocq and documented it in comments
+            \item Adjusted lemmas to fix unsolvable goals (mentioned in evaluation section)
+            \item Completed Lemmas:
+            \begin{itemize}
+                \item filled16
+                \item $filled3$
+                \item $filled3\_pattern$
+                \item $filled\_4\_to\_dword$
+                \item $filled\_overlap\_4bytes$
+                \item $filled\_overlap\_32bytes$
+                \item $filled\_overlap\_16to32bytes$
+                \item $filled\_overlap\_64bytes\_small$
+                \item $filled\_overlap\_64bytes$
+                \item $filled\_unaligned\_large$
+            \end{itemize}
+            \item Admitted Lemmas:
+            \begin{itemize}
+                \item $filled\_5\_to\_dword$
+                \item $filled\_6\_to\_dword$
+                \item $filled\_7\_to\_dword$
+                \item $filled\_8\_to\_qword$
+                \item $filled\_32\_to\_4qwords$
+                \item $qwords\_subsume\_bytes\_tail\_32$
+                \item $qword\_subsumes\_bytes\_tail\_16$
+                \item $filled\_64\_to\_8qwords$
+                \item $qwords\_subsume\_bytes\_tail\_64\_small$
+                \item $qwords\_subsume\_bytes\_tail\_64$
+                \item $unaligned\_qword\_writes\_eq\_filled$
+            \end{itemize}
+            \item Completed Invariant Goals:
+            \begin{itemize}
+                \item $< 4$ byte copy path
+                \item $32$-$64$ byte copy path
+                \item $64$-$128$ byte copy path
+                \item $64$-$96$ byte copy path
+                \item $64$ byte copy loop path
+                \item Large byte copy path
+            \end{itemize}
 
+        \end{itemize}
+        \item Fatema Tuj Johora
+        \begin{itemize}
+            \item Formatted and refined presentation slides.
+            \item Modified $partial\_correctness$ theorem (later remodified by team).
+            \item Attempted byte-wise and $16$–$32$ byte memory copy proofs.
+            \item Contributed to \LaTeX~report.
+        \end{itemize}
+    \end{itemize}
 
     \clearpage
 
     \chapter{Evaluation}
+    At the beginning of the project, we did not map out the binary code given correctly. 
+    This led to creating unnecessary invariants on comparisons and loops of multiple sizes making the proof more complicated. 
+    To prevent this issue, we should have, at first, defined the correctness theorem and stepped through the code in Rocq to confirm the behavior. 
+    The goals stated in Roqc tell us useful information regarding the addresses of the postcondition and entry loop invariants. 
+    This helped us create the invariant set and start proving.
 
+    Another issue we had as a group was taking too much time focusing on the lemmas. 
+    Because we did not have the correctness theorem established, we were blindly defining lemmas that may or may not have been useful. 
+    As stated previously, we should have defined the main correctness theorem and stepped through the code until we got to an invariant. 
+    This made designing a lemma easier since we had all the information in the invariant goal. 
+
+    Even after all these struggles, we were able to prove the partial correctness of $memcpy$. 
+    Throughout each goal, we had to define lemmas along the way to make the goal easier to prove. 
+    Each lemma that was applied in the main proof was proven, however these lemmas depended on other lemmas which were admitted. 
+    The lemmas that were admitted were hard to solve due to complexity and lack of understanding of the Picin\ae~system. 
+
+    As mentioned, we had to admit some lemma due to their complexity.
+    The lemmas that gave us trouble were related to the hardware representation of memory in Picin\ae.
+    We were able to partially unfold their representation using some of the methods included in the Picin\ae~library.
+    We hit the biggest roadblock when we could not fully unfold $setmem$/$getmem$ to match the representation of both consecutive and overlapping writes on the bit level.
+    Although we had to forgo solving these lemmas in favor of solving the larger proof structure,
+    we are certain that with enough time and a deeper understanding of Picin\ae~and its abstractions, they are possible to solve.
+
+    Along the way, there were some admitted goals relating to length. 
+    To solve this issue, we had to adjust the lemmas to make those goals solvable. 
+    This was done successfully as we were able to prove that len is less than or equal to $32$, $64$, $96$, and $128$ bytes.
+
+    In an attempt to solve admitted goals pertaining to impossible length comparisons, we implemented a connection between $k$ and the CPU states. 
+    This resulted in altering the partial correctness to specifically state that $k$ bytes were copied and adjust the remaining copyable length. 
+    This implementation resulted in altering the flow of the proof but it did not solve its intended purpose of impossible to prove length comparisons. 
+    After solving more than half of the goals, it was apparent that either lemmas or assertions were still needed to prove length goals. 
+    Hence this implementation was set aside and focus was brought back to the current solution.
+
+    Overall, despite a few false starts and redesigns our group made significant progress on this proof.
+    We gained valuable insight into the challenge of formally verifying programs related to memory.
+    We were able to flush out the main structure of a proof to prove a partial functional correctness of the $memcpy$ program.
+    We proved that at each exit point in our program, the bytes at the new destination match the bytes at the source for the length passed to the function.
+    The only missing pieces of our proof were a few small lemmas directly related to the functional representation of memory in the Picin\ae~system.
+    These lemmas do not affect the overall proof structure or our invariants and require a more fine grained reasoning about the memory model.
+
+    \section{Results and Discussion}
+    A slight variation on how to conduct the proof from previous attempts.
+    A negative aspect was that the main issue we were trying to solve: 32 < 32 or other length related impossible goals, were not solved.
+    They remained persistent, contributing to the list of reasons this implementation did not survive into the final submission.
+    Due to these issues, we did not attempt to prove all goals; we stopped after a little after half of the goals were solved.
+    Even though half of the goals were proved, most length related goals were passed with admits.
+    This evaluation is only based on the limited implementation that was attempted; further work and editing of theorems and proofs are needed to make full judgement. 
     \clearpage
 
     \chapter{Future Work}
-    There are many additions to the proof that could be worked on.
+    One thing we would have liked to do if we had more time is prove our few admitted lemmas. 
+    In our case these are related directly to the fine grained representation of memory in Picin\ae.
 
-    More properties of $memcpy$ could also be proved.
+    \section{Connecting K to the CPU State}
+    Currently, the solution implemented does not utilize a connection between k and the CPU registers.
+    For future work, it is recommended to implement a connection between k and the CPU.
+    A small tester implementation was attempted but, due to restriction of time, left uncompleted and voided from final submission of project.
+    A walk-through of the implementation is provided below.
 
-    Safety properties
     \clearpage
 
     \chapter{Related Work}
-    memset
+    Verifying the integrity of memory copies is essential for preventing buffer overflow attacks.
+    We took a look at a couple of papers related to this and its impact on the field of research. 
+    Specifically, in class we covered a paper on control flow integrity.
+    In this work they cover the importance of defined behavior [3].
+    In our case, we need to ensure unintended memory behavior did not introduce any security vulnerabilities.
+    Our proof of memcpy strives for this goal, as it verifies byte for bytes memory is copied as intended.
+    We used such principles to map the control flow of the program, and then prove its correctness for each path via well defined behavior.
+
+    [2] This paper goes into the function input parameters regarding the destination and source address, and data size.
+    These repeated memory load and store operations depend on the data size and memory alignment.
+    When the source and destination address are properly aligned, larger size memory transfers instructions are used to reduce the number of executed instructions. 
+    For small data sizes, memcpy uses byte by byte transfer to ensure correct data copying.
+
+    Averill et al. [4] worked on the formal verification of the \texttt{memset} function. 
+    In this report, they have demonstrated partial verification of \texttt{memset}. 
+    The verification of \texttt{memcpy} is closely related to \texttt{memset}, as both functions perform iterative writes over contiguous memory regions and preserve memory safety, boundary constraints.
+    The only difference is that \texttt{memcpy} copies values from source memory to destination; whereas \texttt{memset} fills a block of memory with a specific byte value.
+    Both functions employ block-wise memory writes and follow largely identical control-flow structures, including separate handling of large and small byte writes through similar branching and looping mechanisms.
+
 
     \clearpage
+
+    \chapter*{Works Cited}
+    \begin{enumerate}[label = {[\arabic*]}]
+        \item I. Ghafoor, I. Jattala, S. Durrani and C. Muhammad Tahir, "Analysis of OpenSSL Heartbleed vulnerability for embedded systems," 17th IEEE International Multi Topic Conference $2014$, Karachi, Pakistan, $2014$, pp. $314$-$319$, doi: 10.1109/INMIC.2014.7097358.
+        \item H. Ying, H. Zhu, D. Wang and C. Hou, "A novel scheme to generate optimal memcpy assembly code," 2013 IEEE Third International Conference on Information Science and Technology (ICIST), Yangzhou, China, $2013$, pp. $594$-$597$, doi: 10.1109/ICIST.2013.6747619.
+        \item M. Abadi, M. Budiu, Ú. Erlingsson, and J. Ligatti, "Control-flow integrity principles, implementations, and applications," ACM Transactions on Information and System Security, vol. $13$, no. $1$, pp. $1$–$40$, Oct. $2009$, doi: \url{https://doi.org/10.1145/1609956.1609960}.
+        \item Averill, C., Kadoi, T., Wank, D., \& Harmon, P. $(2023)$. The verification of ARMv7 memset. \url{https://www.charles.systems/writings/The_Verification_of_ARMv7_memset.pdf} 
+    \end{enumerate}
 \end{document}

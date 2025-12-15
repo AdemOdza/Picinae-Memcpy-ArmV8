@@ -864,29 +864,64 @@ Proof.
   psimpl.
   reflexivity.
 Qed.
-(*
-Lemma inv_1byte_init :
-  forall dest src len s m,
-    len < 4 ->
-    common_inv  0 dest src len s m 0->
-    inv_1byte 0 dest src len s m.
-Proof.
-  intros. unfold inv_1byte. auto.
-Qed.
-*)
 
-(*Lemma checked_add_true:
-  ∀ n k len (KLEN: k <= len) (LEN32: len < 2^32) (BC: (n <=? len ⊖ k) = true),
-  k + n <= len.
+Lemma filled1 :
+  forall m dest src,
+    filled m dest src 1 =
+    m[Ⓑ dest := m Ⓑ[src]].
 Proof.
   intros.
-  rewrite N.add_comm. rewrite <- (N.sub_add _ _ KLEN). apply N.add_le_mono_r.
-  rewrite <- (N.mod_small _ _ LEN32). rewrite <- (N.mod_small k (2^32)).
-    rewrite <- msub_nowrap.
-      apply N.leb_le, BC.
-      rewrite (N.mod_small _ _ LEN32). etransitivity. apply mp2_mod_le. apply KLEN.
-    eapply N.le_lt_trans; eassumption.
-Qed.*)
+  replace 1 with (0 + 1) by reflexivity.
+  rewrite (filled_add 1 m dest src 0).
+  rewrite filled0.
+  unfold N.recursion; cbn.
+  repeat rewrite N.add_0_l.
+  repeat rewrite N.add_0_r.
+  reflexivity.
+Qed.
+
+Lemma filled2 :
+  forall m dest src,
+    filled m dest src 2 =
+    m[Ⓑ dest := m Ⓑ[src]]
+     [Ⓑ dest + 1 := m Ⓑ[src + 1]].
+Proof.
+  intros.
+  replace 2 with (0 + 2) by reflexivity.
+  rewrite (filled_add 2 m dest src 0).
+  rewrite filled0.
+  unfold N.recursion; cbn.
+  repeat rewrite N.add_0_l.
+  repeat rewrite N.add_0_r.
+  reflexivity.
+Qed.
+
+Lemma filled_lt4 :
+  forall m dest src len,
+    0 < len < 4 ->
+    filled m dest src len =
+    filled m dest src 0
+      [Ⓑ dest := filled m dest src 0 Ⓑ[ src ] ]
+      [Ⓑ dest + (len >> 1) := filled m dest src 0 Ⓑ[ src + (len >> 1) ] ]
+      [Ⓑ dest ⊖ 1 + len := filled m dest src 0 Ⓑ[ src ⊖ 1 + len ] ].
+Proof.
+  intros m dest src len H.
+  destruct H as [Hgt0 Hlt4].
+  assert (len = 1 \/ len = 2 \/ len = 3) as Hcases by lia.
+  destruct Hcases as [H1 | [H2 | H3]]; subst len.
+  - rewrite filled0.
+    rewrite filled1.
+    psimpl.
+    reflexivity.
+  - rewrite filled0.
+    rewrite filled2.
+    psimpl.
+    reflexivity.
+  - rewrite filled0.
+    apply (filled3_pattern m dest src 3).
+    reflexivity.
+Qed.
+	  
 Require Import NArith.
 
 
@@ -941,9 +976,53 @@ Proof.
   step. step. step. step. step. step. step. 
   (* size < 4 byte copy *)
   exists mem. symmetry. rewrite filled0.
-  assert (len = 3) as Hlen by admit.
-  rewrite filled3_pattern by exact Hlen.
-  reflexivity.
+  apply filled_lt4.
+  assert (Hgt0 : 0 < len).
+  {
+    apply N.eqb_neq in BC4. lia.
+  }
+  split.
+  exact Hgt0.
+  (* prove len < 4 *)
+    assert (Hlt16 : len < 16).
+    { apply N.leb_gt. exact BC1. }
+  apply N.eqb_eq in BC3.
+  assert (len = 0 \/ len = 1 \/ len = 2 \/ len = 3 \/
+          len = 4 \/ len = 5 \/ len = 6 \/ len = 7 \/
+          len = 8 \/ len = 9 \/ len = 10 \/ len = 11 \/
+          len = 12 \/ len = 13 \/ len = 14 \/ len = 15) as Hcases by lia.
+   destruct Hcases as
+    [H0 | [H1 | [H2 | [H3 |
+     [H4 | [H5 | [H6 | [H7 |
+      [H8 | [H9 | [H10 | [H11 |
+       [H12 | [H13 | [H14 | H15]]]]]]]]]]]]]]];
+       subst len; cbn in BC3; cbn in BC2; try lia.
+  exfalso.
+  apply N.eqb_neq in BC4.
+  rewrite H4 in BC3. 
+  cbn in BC3.
+  discriminate.
+  Ltac solve_len_lt4_branch :=
+  lazymatch goal with
+  | H : (?st R_X2) = ?n |- (?st R_X2) < 4 =>
+      first
+        [ (* good cases: n = 1,2,3 *)
+          rewrite H; lia
+        | (* bad cases: contradict the ">>2 mod2 = 0" fact *)
+          exfalso;
+          lazymatch goal with
+          | B3 : N.div2 (N.div2 (?st R_X2)) mod 2 = 0 |- _ =>
+              rewrite H in B3; vm_compute in B3; discriminate
+          end
+        | (* if the >>2 fact doesn't contradict (e.g., n=8..11), use the ">>3 mod2 = 0" eqb fact *)
+          exfalso;
+          lazymatch goal with
+          | B2 : (N.div2 (N.div2 (N.div2 (?st R_X2))) mod 2 =? 0) = true |- _ =>
+              rewrite H in B2; vm_compute in B2; discriminate
+          end
+        ]
+  end.
+  all: try solve_len_lt4_branch.
   step. step. step. step. 
   (* 4-8 byte copy *)
   exists mem. rewrite filled0.

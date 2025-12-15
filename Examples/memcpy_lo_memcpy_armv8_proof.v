@@ -1006,16 +1006,13 @@ Proof.
   lazymatch goal with
   | H : (?st R_X2) = ?n |- (?st R_X2) < 4 =>
       first
-        [ (* good cases: n = 1,2,3 *)
-          rewrite H; lia
-        | (* bad cases: contradict the ">>2 mod2 = 0" fact *)
-          exfalso;
+        [ rewrite H; lia
+        | exfalso;
           lazymatch goal with
           | B3 : N.div2 (N.div2 (?st R_X2)) mod 2 = 0 |- _ =>
               rewrite H in B3; vm_compute in B3; discriminate
           end
-        | (* if the >>2 fact doesn't contradict (e.g., n=8..11), use the ">>3 mod2 = 0" eqb fact *)
-          exfalso;
+        | exfalso;
           lazymatch goal with
           | B2 : (N.div2 (N.div2 (N.div2 (?st R_X2))) mod 2 =? 0) = true |- _ =>
               rewrite H in B2; vm_compute in B2; discriminate
